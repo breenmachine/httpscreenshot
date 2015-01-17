@@ -1,6 +1,14 @@
 # httpscreenshot
 
-Readme and Use cases:
+##Installation on Ubuntu:
+
+apt-get install python-requests python-m2crypto phantomjs
+
+If you run into: 'module' object has no attribute 'PhantomJS'
+then pip install selenium (or pip install --upgrade selenium)
+
+
+##Readme and Use cases:
 
 HTTPScreenshot is a tool for grabbing screenshots and HTML of large numbers of websites. The goal is for it to be both thorough and fast which can sometimes oppose each other.
 
