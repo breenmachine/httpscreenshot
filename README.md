@@ -6,39 +6,39 @@ HTTPScreenshot is a tool for grabbing screenshots and HTML of large numbers of w
 
 Before getting into documentation - this is what I USUALLY use for options if I want to screenshot a bunch of sites:
 
-  ./httpscreenshot.py -i <gnmapFile> -p -w 40 -a -vH
+  ./httpscreenshot.py -i \<gnmapFile\> -p -w 40 -a -vH
 
 Notice there are a ton of worker threads (40). This can be problematic, I make up for failures that could have been a result of too many threads with a second run:
 
-  ./httpscreenshot.py -i <gnmapFile> -p -w 5 -a -vH
+  ./httpscreenshot.py -i \<gnmapFile\> -p -w 5 -a -vH
 
 YMMV
 
 The options are as follows:
 
-  -h, --help            show this help message and exit
-  -l LIST, --list LIST  List of input URLs
-  -i INPUT, --input INPUT
-                        nmap gnmap output file
-  -p, --headless        Run in headless mode (using phantomjs)
-  -w WORKERS, --workers WORKERS
-                        number of threads
-  -t TIMEOUT, --timeout TIMEOUT
+  -h, --help            show this help message and exit   
+  -l LIST, --list LIST  List of input URLs   
+  -i INPUT, --input INPUT   
+                        nmap gnmap output file   
+  -p, --headless        Run in headless mode (using phantomjs)   
+  -w WORKERS, --workers WORKERS   
+                        number of threads   
+  -t TIMEOUT, --timeout TIMEOUT   
                         time to wait for pageload before killing the browser
-  -v, --verbose         turn on verbose debugging
+  -v, --verbose         turn on verbose debugging   
   -a, --autodetect      Automatically detect if listening services are HTTP or
-                        HTTPS. Ignores NMAP service detction and URL schemes.
-  -vH, --vhosts         Attempt to scrape hostnames from SSL certificates and
-                        add these to the URL queue
-  -dB DNS_BRUTE, --dns_brute DNS_BRUTE
-                        Specify a DNS subdomain wordlist for bruteforcing on
-                        wildcard SSL certs
-  -r RETRIES, --retries RETRIES
-                        Number of retries if a URL fails or timesout
+                        HTTPS. Ignores NMAP service detction and URL schemes.     
+  -vH, --vhosts         Attempt to scrape hostnames from SSL certificates and  
+                        add these to the URL queue   
+  -dB DNS_BRUTE, --dns_brute DNS_BRUTE     
+                        Specify a DNS subdomain wordlist for bruteforcing on 
+                        wildcard SSL certs   
+  -r RETRIES, --retries RETRIES   
+                        Number of retries if a URL fails or timesout   
 
 Some of the above options have non-obvious use-cases, so the following provides some more detail:
 
--l, --list -> Takes as input a file with a simple list of input URLs in the format "http(s)://<URL>"
+-l, --list -> Takes as input a file with a simple list of input URLs in the format "http(s)://\<URL\>"
 
 -i, --input -> Takes a gnmap file as input. This includes masscan gnmap output.
 
@@ -52,9 +52,9 @@ Some of the above options have non-obvious use-cases, so the following provides 
 
 -a, --autodetect -> Without this option enabled, HTTPScreenshot will behave as follows:
     
-    ->If a LIST of urls is specified as input, sites with scheme "http://" are treated as non-ssl and sites with scheme "https://" are treated as ssl-enabled
+    If a LIST of urls is specified as input, sites with scheme "http://" are treated as non-ssl and sites with scheme "https://" are treated as ssl-enabled
 
-    ->For GNMAP input the script will scrape input and try to use any SSL detection performed by nmap. Unfortunately this is unreliable, nmap doesn't always like to tell you that something is SSL enabled. Further, masscan doesn't do any version or service detection.
+    For GNMAP input the script will scrape input and try to use any SSL detection performed by nmap. Unfortunately this is unreliable, nmap doesn't always like to tell you that something is SSL enabled. Further, masscan doesn't do any version or service detection.
 
     The -a or --autodetect option throws away all SSL hints from the input file and tries to detect on its own.
 
