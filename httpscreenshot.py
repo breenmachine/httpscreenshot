@@ -21,9 +21,13 @@ import M2Crypto
 import re
 from random import shuffle
 import time
-import Image
-import ImageDraw
-import ImageFont
+# Lines 25-27 are out of date methods as per (http://pillow.readthedocs.org/en/latest/installation.html)
+#import Image
+#import ImageDraw
+#import ImageFont
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
 import signal
 
 reload(sys)
