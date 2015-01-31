@@ -1,0 +1,4 @@
+m2crypto
+requests
+selenium
+beautifulsoup4
