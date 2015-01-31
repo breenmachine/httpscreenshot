@@ -14,7 +14,8 @@ apt-get install -y swig swig2.0 libssl-dev python-dev
 # Newer version in PyPI
 #apt-get install -y python-m2crypto
 
-apt-get install -y python-pil
+# Installing pillow from PIP for the latest
+#apt-get install -y python-pil
 
 # Install pip and install pytnon requirements through it
 apt-get install -y python-pip

@@ -2,3 +2,4 @@ m2crypto
 requests
 selenium
 beautifulsoup4
+pillow
