@@ -2,11 +2,21 @@
 
 ##Installation on Ubuntu:
 
+###Via Script
+
+./install-dependencies.sh
+
+###Manually
+
 apt-get install python-requests python-m2crypto phantomjs
 
 If you run into: 'module' object has no attribute 'PhantomJS'
 then pip install selenium (or pip install --upgrade selenium)
 
+
+If installing on Kali linux, PhantomJS might not be in the repositories, you can download from https://bitbucket.org/ariya/phantomjs/downloads/phantomjs-1.9.8-linux-x86_64.tar.bz2 and symlink to /usr/bin like so:
+
+sudo ln -s /path/to/phantomjs /usr/bin/phantomjs
 
 ##Readme and Use cases:
 
