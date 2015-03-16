@@ -457,7 +457,7 @@ if __name__ == '__main__':
 	manager       = multiprocessing.Manager()
 	hostsDict     = manager.dict()
 	workers       = []
-        hash_basket   = {}
+	hash_basket   = {}
 
 	for i in range(args.workers):
 		p = multiprocessing.Process(target=worker, args=(urlQueue, args.timeout, args.verbose, args.headless, args.autodetect, args.vhosts, subs, hostsDict, args.trygui, args.smartfetch))
