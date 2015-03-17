@@ -187,8 +187,7 @@ def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts,
 		else:
 			if(debug):
 				print'[-] URL queue is empty, quitting.'
-				browser.quit()
-				sys.exit(0)
+			browser.quit()
 			return
 
 		try:
