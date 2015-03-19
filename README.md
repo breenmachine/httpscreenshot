@@ -90,5 +90,5 @@ Some of the above options have non-obvious use-cases, so the following provides 
 
 -r, --retries -> Sometimes Firefox or ghostscript timeout when fetching a page. This could be due to a number of factors, sometimes you just have too many threads going, a network hiccup, etc. This specifies the number of times to "retry" a given host when it fails.
 
-
+-sF, --smartfetch -> Enables smart fetching to reduce network traffic, also increases speed if certain conditions are met.
 
