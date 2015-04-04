@@ -149,7 +149,11 @@ def setupBrowserProfile(headless):
 def writeImage(text, filename, fontsize=40, width=1024, height=200):
 	image = Image.new("RGBA", (width,height), (255,255,255))
 	draw = ImageDraw.Draw(image)
-	font = ImageFont.truetype(os.path.dirname(os.path.realpath(__file__))+"/LiberationSerif-BoldItalic.ttf", fontsize)
+        if (os.path.exists("/usr/share/httpscreenshot/LiberationSerif-BoldItalic.ttf")):
+            font_path = "/usr/share/httpscreenshot/LiberationSerif-BoldItalic.ttf"
+        else:
+            font_path = os.path.dirname(os.path.realpath(__file__))+"/LiberationSerif-BoldItalic.ttf"
+	font = ImageFont.truetype(font_path, fontsize)
 	draw.text((10, 0), text, (0,0,0), font=font)
 	image.save(filename)
 
