@@ -337,7 +337,6 @@ def doGet(*args, **kwargs):
 					extraHosts[name] = 1
 					urlQueue.put(['https://'+name+':'+str(port),False,url[2]])
 					print '[+] Added host '+name
-
 			else:
 				if (name not in extraHosts):
 					extraHosts[name] = 1
@@ -472,5 +471,5 @@ if __name__ == '__main__':
 		urlQueue.put(url)
 
 	for p in workers:
-	        p.join(.001)
+	        p.join()
 			
