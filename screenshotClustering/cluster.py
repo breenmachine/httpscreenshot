@@ -8,6 +8,11 @@ import re
 import time
 from bs4 import BeautifulSoup
 
+try:
+    from urllib.parse import quote
+except:
+    from urllib import quote
+
 def addAttrToBag(attrName,url,link,wordBags,soup):
 	for tag in soup.findAll('',{attrName:True}):
 		if(isinstance(tag[attrName],str) or isinstance(tag[attrName],unicode)):
@@ -141,9 +146,11 @@ def renderClusterHtml(clust,width,height,scopeFile=None):
     
     for cluster,siteList in clust.iteritems():
         html=html+'<TR>'
-    	html=html+'<TR><TD><img src="'+siteList[0][0:-4]+'png" width='+str(width)+' height='+str(height)+'/></TD></TR>'
+        screenshotName = quote(siteList[0][0:-4], safe='')
+        html=html+'<TR><TD><img src="'+screenshotName+'png" width='+str(width)+' height='+str(height)+'/></TD></TR>'
         for site in siteList:
-            html=html+'<TD onmouseout="clearPopup()" onmouseover="popUp(event,\''+site[0:-4]+'png\');"><a href="'+site[0:-4]+'png">'+site[site.rfind('/')+1:site.rfind('-')]+':'+site[site.rfind('-')+1:site.rfind('.')]+'</a></TD>'
+            screenshotName = quote(site[0:-4], safe='')
+            html=html+'<TD onmouseout="clearPopup()" onmouseover="popUp(event,\''+screenshotName+'png\');"><a href="'+screenshotName+'png">'+site[site.rfind('/')+1:site.rfind('-')]+':'+site[site.rfind('-')+1:site.rfind('.')]+'</a></TD>'
         html=html+'</TR>'
     html=html+'</table>'
     footer = '</BODY></HTML>'

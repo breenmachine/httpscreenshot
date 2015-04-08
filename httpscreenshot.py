@@ -28,6 +28,10 @@ import signal
 import shutil
 import hashlib
 
+try:
+    from urllib.parse import quote
+except:
+    from urllib import quote
 
 reload(sys)
 sys.setdefaultencoding("utf8")
@@ -181,9 +185,10 @@ def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts,
 			except Queue.Empty:
 				continue
 			print '[+] '+str(urlQueue.qsize())+' URLs remaining'
-			screenshotName = urlparse(curUrl[0]).netloc.replace(":", "-")
+			screenshotName = quote(curUrl[0], safe='')
 			if(debug):
 				print '[+] Got URL: '+curUrl[0]
+				print '[+] screenshotName: '+screenshotName
 			if(os.path.exists(screenshotName+".png")):
 				if(debug):
 			 		print "[-] Screenshot already exists, skipping"
