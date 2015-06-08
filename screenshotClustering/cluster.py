@@ -143,7 +143,7 @@ def renderClusterHtml(clust,width,height,scopeFile=None):
         html=html+'<TR>'
     	html=html+'<TR><TD><img src="'+siteList[0][0:-4]+'png" width='+str(width)+' height='+str(height)+'/></TD></TR>'
         for site in siteList:
-            html=html+'<TD onmouseout="clearPopup()" onmouseover="popUp(event,\''+site[0:-4]+'png\');"><a href="'+site[0:-4]+'png">'+site[site.rfind('/')+1:site.rfind('-')]+':'+site[site.rfind('-')+1:site.rfind('.')]+'</a></TD>'
+            html=html+'<TD onmouseout="clearPopup()" onmouseover="popUp(event,\''+site[0:-4]+'png\');"><a href="http://'+site[site.rfind('/')+1:site.rfind('-')]+':'+site[site.rfind('-')+1:site.rfind('.')]+'">'+site[site.rfind('/')+1:site.rfind('-')]+':'+site[site.rfind('-')+1:site.rfind('.')]+'</a></TD>'
         html=html+'</TR>'
     html=html+'</table>'
     footer = '</BODY></HTML>'
