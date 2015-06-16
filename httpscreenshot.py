@@ -19,7 +19,6 @@ import argparse
 import sys
 import traceback
 import os.path
-import requests
 import ssl
 import M2Crypto
 import re
@@ -32,6 +31,12 @@ try:
     from urllib.parse import quote
 except:
     from urllib import quote
+
+try:
+	import requesocks as requests
+except:
+	print "requesocks library not found - proxy support will not be available"
+	import requests
 
 reload(sys)
 sys.setdefaultencoding("utf8")
@@ -131,8 +136,13 @@ def parseGnmap(inFile, autodetect):
 	return targets
 
 
-def setupBrowserProfile(headless):
+def setupBrowserProfile(headless,proxy):
 	browser = None
+	if(proxy is not None):
+		service_args=['--ignore-ssl-errors=true','--ssl-protocol=tlsv1','--proxy='+proxy,'--proxy-type=socks5']
+	else:
+		service_args=['--ignore-ssl-errors=true','--ssl-protocol=tlsv1']
+
 	while(browser is None):
 		try:
 			if(not headless):
@@ -140,9 +150,14 @@ def setupBrowserProfile(headless):
 				fp.set_preference("webdriver.accept.untrusted.certs",True)
 				fp.set_preference("security.enable_java", False)
 				fp.set_preference("webdriver.load.strategy", "fast");
+				if(proxy is not None):
+					proxyItems = proxy.split(":")
+					fp.set_preference("network.proxy.socks",proxyItems[0])
+					fp.set_preference("network.proxy.socks_port",int(proxyItems[1]))
+					fp.set_preference("network.proxy.type",1)
 				browser = webdriver.Firefox(fp)
 			else:
-				browser = webdriver.PhantomJS(service_args=['--ignore-ssl-errors=true','--ssl-protocol=tlsv1'], executable_path="phantomjs")
+				browser = webdriver.PhantomJS(service_args=service_args, executable_path="phantomjs")
 		except Exception as e:
 			print e
 			time.sleep(1)
@@ -162,13 +177,13 @@ def writeImage(text, filename, fontsize=40, width=1024, height=200):
 	image.save(filename)
 
 
-def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts, tryGUIOnFail, smartFetch):
+def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts, tryGUIOnFail, smartFetch,proxy):
 	if(debug):
 		print '[*] Starting worker'
 	
 	browser = None
 	try:
-		browser = setupBrowserProfile(headless)
+		browser = setupBrowserProfile(headless,proxy)
 
 	except:
 		print "[-] Oh no! Couldn't create the browser, Selenium blew up"
@@ -201,9 +216,9 @@ def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts,
 
 		try:
 			if(doProfile):
-				[resp,curUrl] = autodetectRequest(curUrl, timeout=tout, vhosts=vhosts, urlQueue=urlQueue, subs=subs, extraHosts=extraHosts)
+				[resp,curUrl] = autodetectRequest(curUrl, timeout=tout, vhosts=vhosts, urlQueue=urlQueue, subs=subs, extraHosts=extraHosts,proxy=proxy)
 			else:
-				resp = doGet(curUrl, verify=False, timeout=tout, vhosts=vhosts, urlQueue=urlQueue, subs=subs, extraHosts=extraHosts)
+				resp = doGet(curUrl, verify=False, timeout=tout, vhosts=vhosts, urlQueue=urlQueue, subs=subs, extraHosts=extraHosts,proxy=proxy)
 			if(resp is not None and resp.status_code == 401):
 				print curUrl[0]+" Requires HTTP Basic Auth"
 				f = open(screenshotName+".html",'w')
@@ -299,10 +314,14 @@ def doGet(*args, **kwargs):
 	urlQueue   = kwargs.pop('urlQueue'  ,None)
 	subs       = kwargs.pop('subs'      ,None)
 	extraHosts = kwargs.pop('extraHosts',None)
+	proxy = kwargs.pop('proxy',None)
 
 	kwargs['allow_redirects'] = False
 
-	resp = requests.get(url[0],**kwargs)
+	session = requests.session()
+	if(proxy is not None):
+		session.proxies={'http':'socks5://'+proxy,'https':'socks5://'+proxy}
+	resp = session.get(url[0],**kwargs)
 
 
 	#If we have an https URL and we are configured to scrape hosts from the cert...
@@ -352,7 +371,7 @@ def doGet(*args, **kwargs):
 		return resp
 
 
-def autodetectRequest(url, timeout, vhosts=False, urlQueue=None, subs=None, extraHosts=None):
+def autodetectRequest(url, timeout, vhosts=False, urlQueue=None, subs=None, extraHosts=None,proxy=None):
 	'''Takes a URL, ignores the scheme. Detect if the host/port is actually an HTTP or HTTPS
 	server'''
 	resp = None
@@ -384,7 +403,7 @@ def autodetectRequest(url, timeout, vhosts=False, urlQueue=None, subs=None, extr
 		url[0] = url[0].replace('https','http')
 		#print 'Changing to HTTP '+url[0]
 	try:
-		resp = doGet(url,verify=False, timeout=timeout, vhosts=vhosts, urlQueue=urlQueue, subs=subs, extraHosts=extraHosts)
+		resp = doGet(url,verify=False, timeout=timeout, vhosts=vhosts, urlQueue=urlQueue, subs=subs, extraHosts=extraHosts, proxy=proxy)
 	except Exception as e:
 		print 'HTTP GET Error: '+str(e)
 		print url[0]
@@ -418,6 +437,8 @@ if __name__ == '__main__':
 	parser.add_argument("-r","--retries",type=int,default=0,help='Number of retries if a URL fails or timesout')
 	parser.add_argument("-tG","--trygui",action='store_true',default=False,help='Try to fetch the page with FireFox when headless fails')
 	parser.add_argument("-sF","--smartfetch",action='store_true',default=False,help='Enables smart fetching to reduce network traffic, also increases speed if certain conditions are met.')
+	parser.add_argument("-pX","--proxy",default=None,help='SOCKS5 Proxy in host:port format')
+
 
 	args = parser.parse_args()
 
@@ -468,7 +489,7 @@ if __name__ == '__main__':
 	hash_basket   = {}
 
 	for i in range(args.workers):
-		p = multiprocessing.Process(target=worker, args=(urlQueue, args.timeout, args.verbose, args.headless, args.autodetect, args.vhosts, subs, hostsDict, args.trygui, args.smartfetch))
+		p = multiprocessing.Process(target=worker, args=(urlQueue, args.timeout, args.verbose, args.headless, args.autodetect, args.vhosts, subs, hostsDict, args.trygui, args.smartfetch,args.proxy))
 		workers.append(p)
 		p.start()
 	

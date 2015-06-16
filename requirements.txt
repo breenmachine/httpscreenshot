@@ -3,3 +3,4 @@ requests
 selenium
 beautifulsoup4
 pillow
+requesocks

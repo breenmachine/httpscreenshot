@@ -36,25 +36,31 @@ YMMV
 
 The options are as follows:
 
-  -h, --help            show this help message and exit   
-  -l LIST, --list LIST  List of input URLs   
-  -i INPUT, --input INPUT   
-                        nmap gnmap output file   
-  -p, --headless        Run in headless mode (using phantomjs)   
-  -w WORKERS, --workers WORKERS   
-                        number of threads   
-  -t TIMEOUT, --timeout TIMEOUT   
+  -h, --help            show this help message and exit
+  -l LIST, --list LIST  List of input URLs
+  -i INPUT, --input INPUT
+                        nmap gnmap output file
+  -p, --headless        Run in headless mode (using phantomjs)
+  -w WORKERS, --workers WORKERS
+                        number of threads
+  -t TIMEOUT, --timeout TIMEOUT
                         time to wait for pageload before killing the browser
-  -v, --verbose         turn on verbose debugging   
+  -v, --verbose         turn on verbose debugging
   -a, --autodetect      Automatically detect if listening services are HTTP or
-                        HTTPS. Ignores NMAP service detction and URL schemes.     
-  -vH, --vhosts         Attempt to scrape hostnames from SSL certificates and  
-                        add these to the URL queue   
-  -dB DNS_BRUTE, --dns_brute DNS_BRUTE     
-                        Specify a DNS subdomain wordlist for bruteforcing on 
-                        wildcard SSL certs   
-  -r RETRIES, --retries RETRIES   
-                        Number of retries if a URL fails or timesout   
+                        HTTPS. Ignores NMAP service detction and URL schemes.
+  -vH, --vhosts         Attempt to scrape hostnames from SSL certificates and
+                        add these to the URL queue
+  -dB DNS_BRUTE, --dns_brute DNS_BRUTE
+                        Specify a DNS subdomain wordlist for bruteforcing on
+                        wildcard SSL certs
+  -r RETRIES, --retries RETRIES
+                        Number of retries if a URL fails or timesout
+  -tG, --trygui         Try to fetch the page with FireFox when headless fails
+  -sF, --smartfetch     Enables smart fetching to reduce network traffic, also
+                        increases speed if certain conditions are met.
+  -pX PROXY, --proxy PROXY
+                        SOCKS5 Proxy in host:port format
+ 
 
 Some of the above options have non-obvious use-cases, so the following provides some more detail:
 
@@ -89,6 +95,8 @@ Some of the above options have non-obvious use-cases, so the following provides 
 -dB, --dns_brute -> Must use with -vH for it to make sense. This flag specifies a file containing a list of potential subdomains. For any wildcard certificate e.g: "\*.google.com", HTTPScreenshot will try to bruteforce valid subdomains and add them to the list of URLs to be screenshotted.
 
 -r, --retries -> Sometimes Firefox or ghostscript timeout when fetching a page. This could be due to a number of factors, sometimes you just have too many threads going, a network hiccup, etc. This specifies the number of times to "retry" a given host when it fails.
+
+-tG, --trygui -> Upon failure to fetch with the headless browser phantomJS, will pop open FireFox and try again.
 
 -sF, --smartfetch -> Enables smart fetching to reduce network traffic, also increases speed if certain conditions are met.
 
