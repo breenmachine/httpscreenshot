@@ -227,72 +227,77 @@ def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts,
 				f.close()
 				writeImage(resp.headers.get('www-authenticate','NO WWW-AUTHENTICATE HEADER'),screenshotName+".png")
 				continue
-			elif(resp is not None):
 
-                                resp_hash = hashlib.md5(resp.text).hexdigest()
+			elif(resp is not None):
+				if(resp.text is not None):
+					resp_hash = hashlib.md5(resp.text).hexdigest()
+				else:
+					resp_hash = None
 				
-                                if smartFetch and resp_hash in hash_basket:
-                                	#We have this exact same page already, copy it instead of grabbing it again
-                                        print "[+] Pre-fetch matches previously imaged service, no need to do it again!"
-                                        shutil.copy2(hash_basket[resp_hash]+".html",screenshotName+".html")
-                                        shutil.copy2(hash_basket[resp_hash]+".png",screenshotName+".png")
-                                else:
+				if smartFetch and resp_hash is not None and resp_hash in hash_basket:
+					#We have this exact same page already, copy it instead of grabbing it again
+					print "[+] Pre-fetch matches previously imaged service, no need to do it again!"
+					shutil.copy2(hash_basket[resp_hash]+".html",screenshotName+".html")
+					shutil.copy2(hash_basket[resp_hash]+".png",screenshotName+".png")
+				else:
 					if smartFetch:
 						hash_basket[resp_hash] = screenshotName
 
-  					browser.set_window_size(1024, 768)
-	  				browser.set_page_load_timeout((tout))
-					old_url = browser.current_url
-					browser.get(curUrl[0].strip())
-					if(browser.current_url == old_url):
-						print "[-] Error fetching in browser but successfully fetched with Requests: "+curUrl[0]
-						if(headless):
+				
+				browser.set_window_size(1024, 768)
+				browser.set_page_load_timeout((tout))
+				old_url = browser.current_url
+				browser.get(curUrl[0].strip())
+				if(browser.current_url == old_url):
+					print "[-] Error fetching in browser but successfully fetched with Requests: "+curUrl[0]
+					if(headless):
+						if(debug):
+							print "[+] Trying with sslv3 instead of TLS - known phantomjs bug: "+curUrl[0]
+						browser2 = webdriver.PhantomJS(service_args=['--ignore-ssl-errors=true'], executable_path="phantomjs")
+						old_url = browser2.current_url
+						browser2.get(curUrl[0].strip())
+						if(browser2.current_url == old_url):
 							if(debug):
-								print "[+] Trying with sslv3 instead of TLS - known phantomjs bug: "+curUrl[0]
-							browser2 = webdriver.PhantomJS(service_args=['--ignore-ssl-errors=true'], executable_path="phantomjs")
-							old_url = browser2.current_url
-							browser2.get(curUrl[0].strip())
-							if(browser2.current_url == old_url):
-								if(debug):
-									print "[-] Didn't work with SSLv3 either..."+curUrl[0]
-								browser2.close()
-							else:
-								print '[+] Saving: '+screenshotName
-								html_source = browser2.page_source
-								f = open(screenshotName+".html",'w')
-								f.write(html_source)
-								f.close()
-								browser2.save_screenshot(screenshotName+".png")
-								browser2.close()
-								continue						
-	
-						if(tryGUIOnFail and headless):
-							print "[+] Attempting to fetch with FireFox: "+curUrl[0]
-							browser2 = setupBrowserProfile(False)
-							old_url = browser2.current_url
-							browser2.get(curUrl[0].strip())
-							if(browser2.current_url == old_url):
-								print "[-] Error fetching in GUI browser as well..."+curUrl[0]
-								browser2.close()
-								continue
-							else:
-								print '[+] Saving: '+screenshotName
-								html_source = browser2.page_source
-								f = open(screenshotName+".html",'w')
-								f.write(html_source)
-								f.close()
-								browser2.save_screenshot(screenshotName+".png")
-								browser2.close()
-								continue
+								print "[-] Didn't work with SSLv3 either..."+curUrl[0]
+							browser2.close()
 						else:
+							print '[+] Saving: '+screenshotName
+							html_source = browser2.page_source
+							f = open(screenshotName+".html",'w')
+							f.write(html_source)
+							f.close()
+							browser2.save_screenshot(screenshotName+".png")
+							browser2.close()
+							continue						
+
+					if(tryGUIOnFail and headless):
+						print "[+] Attempting to fetch with FireFox: "+curUrl[0]
+						browser2 = setupBrowserProfile(False,proxy)
+						old_url = browser2.current_url
+						browser2.get(curUrl[0].strip())
+						if(browser2.current_url == old_url):
+							print "[-] Error fetching in GUI browser as well..."+curUrl[0]
+							browser2.close()
 							continue
-	
-					print '[+] Saving: '+screenshotName
-					html_source = browser.page_source
-					f = open(screenshotName+".html",'w')
-					f.write(html_source)
-					f.close()
-					browser.save_screenshot(screenshotName+".png")
+						else:
+							print '[+] Saving: '+screenshotName
+							html_source = browser2.page_source
+							f = open(screenshotName+".html",'w')
+							f.write(html_source)
+							f.close()
+							browser2.save_screenshot(screenshotName+".png")
+							browser2.close()
+							continue
+					else:
+						continue
+
+				print '[+] Saving: '+screenshotName
+				html_source = browser.page_source
+				f = open(screenshotName+".html",'w')
+				f.write(html_source)
+				f.close()
+				browser.save_screenshot(screenshotName+".png")
+
 		except Exception as e:
 			print e
 			print '[-] Something bad happened with URL: '+curUrl[0]
@@ -304,7 +309,7 @@ def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts,
 				lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
 				print ''.join('!! ' + line for line in lines) 
 			browser.quit()
-			browser = setupBrowserProfile(headless)
+			browser = setupBrowserProfile(headless,proxy)
 			continue
 
 
