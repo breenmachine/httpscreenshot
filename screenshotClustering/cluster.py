@@ -150,7 +150,7 @@ def renderClusterHtml(clust,width,height,scopeFile=None):
         html=html+'<TR><TD><img src="'+screenshotName+'png" width='+str(width)+' height='+str(height)+'/></TD></TR>'
         for site in siteList:
             screenshotName = quote(site[0:-5], safe='./')
-            html=html+'<TD onmouseout="clearPopup()" onmouseover="popUp(event,\''+screenshotName+'.png\');"><a href="'+unquote(unquote(screenshotName[4:]).decode("utf-8")).decode("utf-8")+'">'+unquote(unquote(screenshotName[4:]).decode("utf-8")).decode("utf-8")+'</a></TD>'
+            html=html+'<TD onmouseout="clearPopup()" onmouseover="popUp(event,\''+screenshotName+'.png\');"><a href="'+unquote(unquote(screenshotName[2:]).decode("utf-8")).decode("utf-8")+'">'+unquote(unquote(screenshotName[2:]).decode("utf-8")).decode("utf-8")+'</a></TD>'
         html=html+'</TR>'
     html=html+'</table>'
     footer = '</BODY></HTML>'
