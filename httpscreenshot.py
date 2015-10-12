@@ -322,12 +322,10 @@ def doGet(*args, **kwargs):
 	proxy = kwargs.pop('proxy',None)
 
 	kwargs['allow_redirects'] = False
-
 	session = requests.session()
 	if(proxy is not None):
 		session.proxies={'http':'socks5://'+proxy,'https':'socks5://'+proxy}
 	resp = session.get(url[0],**kwargs)
-
 
 	#If we have an https URL and we are configured to scrape hosts from the cert...
 	if(url[0].find('https') != -1 and url[1] == True):
@@ -336,13 +334,12 @@ def doGet(*args, **kwargs):
 		port = urlparse(url[0]).port
 		if(port is None):
 			port = 443
-
-		cert     = ssl.get_server_certificate((host,port),ssl_version=ssl.PROTOCOL_SSLv23)
-		x509     = M2Crypto.X509.load_cert_string(cert)
-		subjText = x509.get_subject().as_text()
-		names    = re.findall("CN=([^\s]+)",subjText)
-
+		names = []
 		try:
+			cert     = ssl.get_server_certificate((host,port),ssl_version=ssl.PROTOCOL_SSLv23)
+			x509     = M2Crypto.X509.load_cert_string(cert)
+			subjText = x509.get_subject().as_text()
+			names    = re.findall("CN=([^\s]+)",subjText)
 			altNames = x509.get_ext('subjectAltName').get_value()
 			names.extend(re.findall("DNS:([^,]*)",altNames))
 		except:
