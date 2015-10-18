@@ -436,6 +436,7 @@ if __name__ == '__main__':
 	parser.add_argument("-a","--autodetect",action='store_true',default=False,help='Automatically detect if listening services are HTTP or HTTPS. Ignores NMAP service detction and URL schemes.')
 	parser.add_argument("-vH","--vhosts",action='store_true',default=False,help='Attempt to scrape hostnames from SSL certificates and add these to the URL queue')
 	parser.add_argument("-dB","--dns_brute",help='Specify a DNS subdomain wordlist for bruteforcing on wildcard SSL certs')
+	parser.add_argument("-uL","--uri_list",help='Specify a list of URIs to fetch in addition to the root')
 	parser.add_argument("-r","--retries",type=int,default=0,help='Number of retries if a URL fails or timesout')
 	parser.add_argument("-tG","--trygui",action='store_true',default=False,help='Try to fetch the page with FireFox when headless fails')
 	parser.add_argument("-sF","--smartfetch",action='store_true',default=False,help='Enables smart fetching to reduce network traffic, also increases speed if certain conditions are met.')
@@ -448,6 +449,13 @@ if __name__ == '__main__':
 		parser.print_help()
 		sys.exit(0)
 
+	
+	#read in the URI list if specificed
+	uris = ['']
+	if(args.uri_list != None):
+		uris = open(args.uri_list,'r').readlines()
+		uris.append('')
+
 	if(args.input is not None):
 		inFile = open(args.input,'r')
 		if(detectFileType(inFile) == 'gnmap'):
@@ -455,12 +463,13 @@ if __name__ == '__main__':
 			urls = []
 			for host,ports in hosts.items():
 				for port in ports:
-					url = ''
-					if port[1] == True:
-						url = ['https://'+host+':'+port[0],args.vhosts,args.retries]
-					else:
-						url = ['http://'+host+':'+port[0],args.vhosts,args.retries]
-					urls.append(url)
+					for uri in uris:
+						url = ''
+						if port[1] == True:
+							url = ['https://'+host+':'+port[0]+uri,args.vhosts,args.retries]
+						else:
+							url = ['http://'+host+':'+port[0]+uri,args.vhosts,args.retries]
+						urls.append(url)
 		else:
 			print 'Invalid input file - must be Nmap GNMAP'
 	
