@@ -466,9 +466,9 @@ if __name__ == '__main__':
 					for uri in uris:
 						url = ''
 						if port[1] == True:
-							url = ['https://'+host+':'+port[0]+uri,args.vhosts,args.retries]
+							url = ['https://'+host+':'+port[0]+uri.strip(),args.vhosts,args.retries]
 						else:
-							url = ['http://'+host+':'+port[0]+uri,args.vhosts,args.retries]
+							url = ['http://'+host+':'+port[0]+uri.strip(),args.vhosts,args.retries]
 						urls.append(url)
 		else:
 			print 'Invalid input file - must be Nmap GNMAP'
