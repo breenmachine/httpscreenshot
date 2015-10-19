@@ -421,7 +421,7 @@ def sslError(e):
 
 def signal_handler(signal, frame):
         print "[-] Ctrl-C received! Killing Thread(s)..."
-	sys.exit(0)
+	os._exit(0)
 signal.signal(signal.SIGINT, signal_handler)
 
 if __name__ == '__main__':
