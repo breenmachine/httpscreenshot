@@ -337,7 +337,7 @@ def doGet(*args, **kwargs):
 		names = []
 		try:
 			cert     = ssl.get_server_certificate((host,port),ssl_version=ssl.PROTOCOL_SSLv23)
-			x509     = M2Crypto.X509.load_cert_string(cert)
+			x509     = M2Crypto.X509.load_cert_string(cert.decode('string_escape'))
 			subjText = x509.get_subject().as_text()
 			names    = re.findall("CN=([^\s]+)",subjText)
 			altNames = x509.get_ext('subjectAltName').get_value()
