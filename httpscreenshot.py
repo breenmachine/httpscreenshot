@@ -457,7 +457,7 @@ if __name__ == '__main__':
 		uris.append('')
 
 	if(args.input is not None):
-		inFile = open(args.input,'r')
+		inFile = open(args.input,'rU')
 		if(detectFileType(inFile) == 'gnmap'):
 			hosts = parseGnmap(inFile,args.autodetect)
 			urls = []
