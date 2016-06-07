@@ -53,7 +53,7 @@ def createWordBags(htmlList):
 	for f in htmlList:
 		htmlContent = open(f,'r').read()
 		wordBags[f]={}
-		soup = BeautifulSoup(htmlContent)
+		soup = BeautifulSoup(htmlContent, 'html.parser')
 		addAttrToBag('name',f,False,wordBags,soup)
 		addAttrToBag('href',f,True,wordBags,soup)
 		addAttrToBag('src',f,True,wordBags,soup)
