@@ -13,6 +13,7 @@ from random   import shuffle
 from PIL      import Image
 from PIL      import ImageDraw
 from PIL      import ImageFont
+from libnmap.parser import NmapParser
 import multiprocessing
 import Queue
 import argparse
@@ -90,9 +91,32 @@ def detectFileType(inFile):
 		else:
 			print("Nmap version detection not used! Discovery module may miss some hosts!")
 			return 'gnmap'
+	elif ((firstLine.find('xml version') != -1) and secondLine.find('DOCTYPE nmaprun') != -1):
+		return 'xml'
 	else:
 		return None
 
+def parsexml(inFile):
+	targets = {}
+	infile = NmapParser.parse_fromfile(args.input)
+	for host in infile.hosts:
+		if host.services:
+			currentTarget = []
+			for s in host.services:
+				if s.state != 'closed' and 'http' in s.service:
+					ip = host.address
+					port = str(s.port)
+					https = False
+					if 'https' in s.service or 'ssl' in s.service:
+						https = True
+
+					currentTarget.append([port,https])
+
+			if(len(currentTarget) > 0):
+				targets[ip] = currentTarget
+
+	return targets
+	print "Parsing is complete, continue on..."
 
 def parseGnmap(inFile, autodetect):
 	'''
@@ -428,7 +452,7 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 
 	parser.add_argument("-l","--list",help='List of input URLs')
-	parser.add_argument("-i","--input",help='nmap gnmap output file')
+	parser.add_argument("-i","--input",help='nmap gnmap/xml output file')
 	parser.add_argument("-p","--headless",action='store_true',default=False,help='Run in headless mode (using phantomjs)')
 	parser.add_argument("-w","--workers",default=1,type=int,help='number of threads')
 	parser.add_argument("-t","--timeout",type=int,default=10,help='time to wait for pageload before killing the browser')
@@ -470,8 +494,20 @@ if __name__ == '__main__':
 						else:
 							url = ['http://'+host+':'+port[0]+uri.strip(),args.vhosts,args.retries]
 						urls.append(url)
+		elif(detectFileType(inFile) == 'xml'):
+			hosts = parsexml(inFile)
+			urls = []
+			for host,ports in hosts.items():
+				for port in ports:
+					for uri in uris:
+						url = ''
+						if port[1] == True:
+							url = ['https://'+host+':'+port[0]+uri.strip(),args.vhosts,args.retries]
+						else:
+							url = ['http://'+host+':'+port[0]+uri.strip(),args.vhosts,args.retries]
+						urls.append(url)
 		else:
-			print 'Invalid input file - must be Nmap GNMAP'
+			print 'Invalid input file - must be Nmap GNMAP or Nmap XML'
 	
 	elif (args.list is not None):
 		f = open(args.list,'r')
