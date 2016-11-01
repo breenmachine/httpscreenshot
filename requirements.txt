@@ -4,4 +4,4 @@ selenium
 beautifulsoup4
 pillow
 requesocks
-libnmap
+python-libnmap
