@@ -9,9 +9,9 @@ import time
 from bs4 import BeautifulSoup
 
 try:
-    from urllib.parse import quote,unquote
+	from urllib.parse import quote,unquote
 except:
-    from urllib import quote,unquote
+	from urllib import quote,unquote
 
 def addAttrToBag(attrName,url,link,wordBags,soup):
 	for tag in soup.findAll('',{attrName:True}):
@@ -61,7 +61,6 @@ def createWordBags(htmlList):
 		addAttrToBag('class',f,False,wordBags,soup)		
 		addTagToBag('title',f,False,wordBags,soup)
 		addTagToBag('h1',f,False,wordBags,soup)
-
 	return wordBags
 
 def getNumWords(wordBag):
@@ -114,7 +113,6 @@ def createClusters(wordBags,threshold):
 				if (clusterData[siteList[j]][0] <= threshold and score > clusterData[siteList[j]][0]):
 					clusterData[siteList[j]][1] = i
 					clusterData[siteList[j]][0] = score
-
 	return clusterData
 
 def getScopeHtml(scopeFile):
@@ -126,63 +124,237 @@ def getScopeHtml(scopeFile):
 		scopeText = scopeText + line+'<br/>'
 	return scopeText
 
-def renderClusterHtml(clust,width,height,scopeFile=None):
-    html = ''
-    scopeHtml = getScopeHtml(scopeFile)
-    header = '''
-    	<HTML>
-    		<title>Web Application Catalog</title>
-    		<BODY>
-    			<h1>Web Application Catalog</h1>
-    '''
-    if(scopeHtml is not None):
-    	header = header+scopeHtml
-    header = header + '''
-    			<script type="text/javascript" src="popup.js"></script>
-    			<LINK href="style.css" rel="stylesheet" type="text/css">
-    			<h3>Catalog:</h3>
-    			'''
-    html = html+'<table border="1">'
-    
-    for cluster,siteList in clust.iteritems():
-        html=html+'<TR>'
-        screenshotName = quote(siteList[0][0:-4], safe='./')
-        html=html+'<TR><TD><img src="'+screenshotName+'png" width='+str(width)+' height='+str(height)+'/></TD></TR>'
-        for site in siteList:
-            screenshotName = quote(site[0:-5], safe='./')
-            html=html+'<TD onmouseout="clearPopup()" onmouseover="popUp(event,\''+screenshotName+'.png\');"><a href="'+unquote(unquote(screenshotName[2:]).decode("utf-8")).decode("utf-8")+'">'+unquote(unquote(screenshotName[2:]).decode("utf-8")).decode("utf-8")+'</a></TD>'
-        html=html+'</TR>'
-    html=html+'</table>'
-    footer = '</BODY></HTML>'
+def getPageTitle(htmlFile):
+	"""Simple function to yank page title from html"""
+	with open(htmlFile, 'r') as f:
+		soup = BeautifulSoup(f, "lxml")
+	try:
+		return soup.title.string.encode('ascii', 'ignore')
+	except AttributeError:
+		return "No Page Title Found"
 
-    return [header,html,footer]
+def renderClusterHtml(clust,width,height,scopeFile=None):
+	html = ''
+	scopeHtml = getScopeHtml(scopeFile)
+	header = '''
+	<HTML>
+		<title>Web Application Catalog</title>
+		<BODY>
+	'''
+	if(scopeHtml is not None):
+		header = header+scopeHtml
+	header = header + '''
+		<script type="text/javascript" src="popup.js"></script>
+		<LINK href="style.css" rel="stylesheet" type="text/css">
+		<div class="table-title">
+	        <h3>Web Application Catalog:</h3>
+        </div>
+		'''
+	for cluster, siteList in clust.items():
+		html = html + """
+			<table class="table-fill">
+			<thead>
+				<TR>
+					<th class="text-left" colspan="2">
+						""" + getPageTitle(siteList[0]) + """ </th>
+				</TR>
+			</thead>
+				<TR>
+			"""
+		screenshotName = quote(siteList[0][0:-4], safe='./')
+		html = html + '<TD> <img src="'+screenshotName+'png" width='+str(width)+' height='+str(height)+'/></TD><TD>'
+		for site in siteList:
+			screenshotName = quote(site[0:-5], safe='./')
+			if site != siteList[-1]:
+				html = html + '<div onmouseout="clearPopup()" onmouseover="popUp(event,\''+screenshotName+'.png\');"><a href="'+unquote(unquote(screenshotName[2:]).decode("utf-8")).decode("utf-8")+'">'+unquote(unquote(screenshotName[2:]).decode("utf-8")).decode("utf-8")+'</a><br /></div>'
+			else:
+				html = html + '<div onmouseout="clearPopup()" onmouseover="popUp(event,\''+screenshotName+'.png\');"><a href="'+unquote(unquote(screenshotName[2:]).decode("utf-8")).decode("utf-8")+'">'+unquote(unquote(screenshotName[2:]).decode("utf-8")).decode("utf-8")+'</a></div> </TD></TR></table>'
+
+
+	footer = '</BODY></HTML>'
+	return [header,html,footer]
+
+
+
 def printJS():
 	js = """
 	function popUp(e,src)
 	{
-	    x = e.clientX;
-	    y = e.clientY;
+		x = e.clientX;
+		y = e.clientY;
 
-	    var img = document.createElement("img");
-	    img.src = src;
-	    img.setAttribute("class","popUp");
-	    img.setAttribute("style","position:fixed;left:"+(x+15)+";top:"+0+";background-color:white");
-	    //img.setAttribute("onmouseout","clearPopup(event)")
-	    // This next line will just add it to the <body> tag
-	    document.body.appendChild(img);
+		var img = document.createElement("img");
+		img.src = src;
+		img.setAttribute("class","popUp");
+		img.setAttribute("style","position:fixed;left:"+(x+15)+";top:"+0+";background-color:white");
+		//img.setAttribute("onmouseout","clearPopup(event)")
+		// This next line will just add it to the <body> tag
+		document.body.appendChild(img);
 	}
 
 	function clearPopup()
 	{
-	    var popUps = document.getElementsByClassName('popUp');
-	    while(popUps[0]) {
-	        popUps[0].parentNode.removeChild(popUps[0]);
-	    }
+		var popUps = document.getElementsByClassName('popUp');
+		while(popUps[0]) {
+			popUps[0].parentNode.removeChild(popUps[0]);
+		}
 	}
 	"""
 
 	f = open('popup.js','w')
 	f.write(js)
+	f.close()
+
+def printCSS():
+	css = """
+	@import url(http://fonts.googleapis.com/css?family=Roboto:400,500,700,300,100);
+
+	body {
+		background-color: #3e94ec;
+		font-family: "Roboto", helvetica, arial, sans-serif;
+		font-size: 16px;
+		font-weight: 400;
+		text-rendering: optimizeLegibility;
+	}
+
+	div.table-title {
+		display: block;
+		margin: auto;
+		max-width: 600px;
+		padding:5px;
+		width: 100%;
+	}
+
+	.table-title h3 {
+		color: #fafafa;
+		font-size: 30px;
+		font-weight: 400;
+		font-style:normal;
+		font-family: "Roboto", helvetica, arial, sans-serif;
+		text-shadow: -1px -1px 1px rgba(0, 0, 0, 0.1);
+		text-transform:uppercase;
+	}
+
+
+	/*** Table Styles **/
+
+	.table-fill {
+		background: white;
+		border-radius:3px;
+		border-collapse: collapse;
+		height: 320px;
+		margin: auto;
+		margin-bottom: 50px;
+		max-width: 600px;
+		padding:5px;
+		width: 100%;
+		box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+		animation: float 5s infinite;
+	}
+
+	th {
+		color:#D5DDE5;;
+		background:#1b1e24;
+		border-bottom:4px solid #9ea7af;
+		border-right: 1px solid #343a45;
+		font-size:23px;
+		font-weight: 100;
+		padding:24px;
+		text-align:left;
+		text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+		vertical-align:middle;
+	}
+
+	th:first-child {
+		border-top-left-radius:3px;
+	}
+
+	th:last-child {
+		border-top-right-radius:3px;
+		border-right:none;
+	}
+
+	tr {
+		border-top: 1px solid #C1C3D1;
+		border-bottom-: 1px solid #C1C3D1;
+		color:#666B85;
+		font-size:16px;
+		font-weight:normal;
+		text-shadow: 0 1px 1px rgba(256, 256, 256, 0.1);
+	}
+
+	tr:hover td {
+		background:#4E5066;
+		color:#FFFFFF;
+		border-top: 1px solid #22262e;
+		border-bottom: 1px solid #22262e;
+	}
+
+	tr:first-child {
+		border-top:none;
+	}
+
+	tr:last-child {
+		border-bottom:none;
+	}
+
+	tr:nth-child(odd) td {
+		background:#EBEBEB;
+	}
+
+	tr:nth-child(odd):hover td {
+		background:#4E5066;
+	}
+
+	tr:last-child td:first-child {
+		border-bottom-left-radius:3px;
+	}
+
+	tr:last-child td:last-child {
+		border-bottom-right-radius:3px;
+	}
+
+	td {
+		background:#FFFFFF;
+		padding:20px;
+		text-align:left;
+		vertical-align:middle;
+		font-weight:300;
+		font-size:18px;
+		text-shadow: -1px -1px 1px rgba(0, 0, 0, 0.1);
+		border-right: 1px solid #C1C3D1;
+	}
+
+	td:last-child {
+		border-right: 0px;
+	}
+
+	th.text-left {
+		text-align: left;
+	}
+
+	th.text-center {
+		text-align: center;
+	}
+
+	th.text-right {
+		text-align: right;
+	}
+
+	td.text-left {
+		text-align: left;
+	}
+
+	td.text-center {
+		text-align: center;
+	}
+
+	td.text-right {
+		text-align: right;
+	}
+	"""
+	f = open('style.css','w')
+	f.write(css)
 	f.close()
 
 def doCluster(htmlList):
@@ -268,7 +440,7 @@ if __name__ == '__main__':
 	htmlRegex = re.compile('.*html.*')
 	for fileName in os.listdir(path):
 		if(htmlRegex.match(fileName)):
-	    		htmlList.append(path+fileName)
+				htmlList.append(path+fileName)
 	
 	n = len(htmlList)
 
@@ -281,7 +453,7 @@ if __name__ == '__main__':
 		diffList = []
 		for fileName in os.listdir(args.diff):
 			if(htmlRegex.match(fileName)):
-		    		diffList.append(args.diff+fileName)
+					diffList.append(args.diff+fileName)
 		
 		lists = doDiff(htmlList,diffList)
 
@@ -315,4 +487,5 @@ if __name__ == '__main__':
 	f = open(args.output,'w')
 	f.write(html)
 	printJS()
+	printCSS()
 	
