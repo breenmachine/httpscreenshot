@@ -6,7 +6,7 @@
 # Error out if one fails
 set -e
 
-apt-get install -y swig swig3.0 libssl-dev python-dev libjpeg-dev
+apt-get install -y swig swig3.0 libssl-dev python-dev libjpeg-dev xvfb
 
 # Newer version in PyPI
 #apt-get install -y python-requests

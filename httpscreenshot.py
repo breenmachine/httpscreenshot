@@ -27,6 +27,10 @@ import time
 import signal
 import shutil
 import hashlib
+from pyvirtualdisplay import Display
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+
+
 
 try:
     from urllib.parse import quote
@@ -163,13 +167,15 @@ def parseGnmap(inFile, autodetect):
 def setupBrowserProfile(headless,proxy):
 	browser = None
 	if(proxy is not None):
-		service_args=['--ignore-ssl-errors=true','--ssl-protocol=tlsv1','--proxy='+proxy,'--proxy-type=socks5']
+		service_args=['--ignore-ssl-errors=true','--ssl-protocol=any','--proxy='+proxy,'--proxy-type=socks5']
 	else:
-		service_args=['--ignore-ssl-errors=true','--ssl-protocol=tlsv1']
+		service_args=['--ignore-ssl-errors=true','--ssl-protocol=any']
 
 	while(browser is None):
 		try:
 			if(not headless):
+				capabilities = DesiredCapabilities.FIREFOX
+				capabilities['acceptSslCerts'] = True
 				fp = webdriver.FirefoxProfile()
 				fp.set_preference("webdriver.accept.untrusted.certs",True)
 				fp.set_preference("security.enable_java", False)
@@ -179,9 +185,11 @@ def setupBrowserProfile(headless,proxy):
 					fp.set_preference("network.proxy.socks",proxyItems[0])
 					fp.set_preference("network.proxy.socks_port",int(proxyItems[1]))
 					fp.set_preference("network.proxy.type",1)
-				browser = webdriver.Firefox(fp)
+				browser = webdriver.Firefox(firefox_profile=fp,capabilities=capabilities)
 			else:
 				browser = webdriver.PhantomJS(service_args=service_args, executable_path="phantomjs")
+				browser.set_window_size(1024, 768)
+
 		except Exception as e:
 			print e
 			time.sleep(1)
@@ -206,7 +214,12 @@ def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts,
 		print '[*] Starting worker'
 	
 	browser = None
+	display = None
 	try:
+		if(tryGUIOnFail or not headless):
+			display = Display(visible=0, size=(800, 600))
+			display.start()
+
 		browser = setupBrowserProfile(headless,proxy)
 
 	except:
@@ -214,6 +227,8 @@ def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts,
 		exc_type, exc_value, exc_traceback = sys.exc_info()
 		lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
 		print ''.join('!! ' + line for line in lines)
+		browser.quit()
+		display.stop()
 		return
 
 	while True:
@@ -268,50 +283,68 @@ def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts,
 						hash_basket[resp_hash] = screenshotName
 
 				
-				browser.set_window_size(1024, 768)
+				#browser.set_window_size(1024, 768)
 				browser.set_page_load_timeout((tout))
 				old_url = browser.current_url
 				browser.get(curUrl[0].strip())
 				if(browser.current_url == old_url):
 					print "[-] Error fetching in browser but successfully fetched with Requests: "+curUrl[0]
 					if(headless):
+						browser2 = None
 						if(debug):
 							print "[+] Trying with sslv3 instead of TLS - known phantomjs bug: "+curUrl[0]
-						browser2 = webdriver.PhantomJS(service_args=['--ignore-ssl-errors=true'], executable_path="phantomjs")
-						old_url = browser2.current_url
-						browser2.get(curUrl[0].strip())
-						if(browser2.current_url == old_url):
-							if(debug):
-								print "[-] Didn't work with SSLv3 either..."+curUrl[0]
-							browser2.close()
+						if(proxy is not None):
+							browser2 = webdriver.PhantomJS(service_args=['--ignore-ssl-errors=true','--proxy='+proxy,'--proxy-type=socks5'], executable_path="phantomjs")
 						else:
-							print '[+] Saving: '+screenshotName
-							html_source = browser2.page_source
-							f = open(screenshotName+".html",'w')
-							f.write(html_source)
-							f.close()
-							browser2.save_screenshot(screenshotName+".png")
-							browser2.close()
-							continue						
+							browser2 = webdriver.PhantomJS(service_args=['--ignore-ssl-errors=true'], executable_path="phantomjs")
+							#print "Launched browser2: "+str(browser2.service.process.pid)
+
+						old_url = browser2.current_url
+						try:
+							browser2.get(curUrl[0].strip())
+							if(browser2.current_url == old_url):
+								if(debug):
+									print "[-] Didn't work with SSLv3 either..."+curUrl[0]
+								browser2.quit()
+							else:
+								print '[+] Saving: '+screenshotName
+								html_source = browser2.page_source
+								f = open(screenshotName+".html",'w')
+								f.write(html_source)
+								f.close()
+								browser2.save_screenshot(screenshotName+".png")
+								browser2.quit()
+								continue
+						except:
+							browser2.quit()
+							print "[-] Didn't work with SSLv3 either - exception..."+curUrl[0]					
 
 					if(tryGUIOnFail and headless):
+						display = Display(visible=0, size=(1024, 768))
+						display.start()
 						print "[+] Attempting to fetch with FireFox: "+curUrl[0]
 						browser2 = setupBrowserProfile(False,proxy)
 						old_url = browser2.current_url
-						browser2.get(curUrl[0].strip())
-						if(browser2.current_url == old_url):
+						try:
+							browser2.get(curUrl[0].strip())
+							if(browser2.current_url == old_url):
+								print "[-] Error fetching in GUI browser as well..."+curUrl[0]
+								browser2.quit()
+								continue
+							else:
+								print '[+] Saving: '+screenshotName
+								html_source = browser2.page_source
+								f = open(screenshotName+".html",'w')
+								f.write(html_source)
+								f.close()
+								browser2.save_screenshot(screenshotName+".png")
+								browser2.quit()
+								continue
+						except:
+							browser2.quit()
+							display.stop()
 							print "[-] Error fetching in GUI browser as well..."+curUrl[0]
-							browser2.close()
-							continue
-						else:
-							print '[+] Saving: '+screenshotName
-							html_source = browser2.page_source
-							f = open(screenshotName+".html",'w')
-							f.write(html_source)
-							f.close()
-							browser2.save_screenshot(screenshotName+".png")
-							browser2.close()
-							continue
+
 					else:
 						continue
 
@@ -331,11 +364,12 @@ def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts,
 			if(debug):
 				exc_type, exc_value, exc_traceback = sys.exc_info()
 				lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
-				print ''.join('!! ' + line for line in lines) 
+				print ''.join('!! ' + line for line in lines)
 			browser.quit()
 			browser = setupBrowserProfile(headless,proxy)
 			continue
-
+	browser.quit()
+	display.stop()
 
 def doGet(*args, **kwargs):
 	url        = args[0]
