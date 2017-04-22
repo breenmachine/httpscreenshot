@@ -131,6 +131,8 @@ def parseGnmap(inFile, autodetect):
 	'''
 	targets = {}
 	for hostLine in inFile:
+                if hostLine.strip() == '':
+                    break
 		currentTarget = []
 		#Pull out the IP address (or hostnames) and HTTP service ports
 		fields = hostLine.split(' ')
