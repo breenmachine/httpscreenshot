@@ -199,7 +199,7 @@ def setupBrowserProfile(headless,proxy):
 	return browser
 
 
-def writeImage(text, filename, fontsize=40, width=1024, height=200):
+def writeImage(text, filename, outputdir, fontsize=40, width=1024, height=200):
 	image = Image.new("RGBA", (width,height), (255,255,255))
 	draw = ImageDraw.Draw(image)
         if (os.path.exists("/usr/share/httpscreenshot/LiberationSerif-BoldItalic.ttf")):
@@ -208,10 +208,10 @@ def writeImage(text, filename, fontsize=40, width=1024, height=200):
             font_path = os.path.dirname(os.path.realpath(__file__))+"/LiberationSerif-BoldItalic.ttf"
 	font = ImageFont.truetype(font_path, fontsize)
 	draw.text((10, 0), text, (0,0,0), font=font)
-	image.save(filename)
+	image.save(os.path.join(outputdir, filename))
 
 
-def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts, tryGUIOnFail, smartFetch,proxy):
+def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts, tryGUIOnFail, smartFetch, proxy, outputdir):
 	if(debug):
 		print '[*] Starting worker'
 	
@@ -245,7 +245,7 @@ def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts,
 			if(debug):
 				print '[+] Got URL: '+curUrl[0]
 				print '[+] screenshotName: '+screenshotName
-			if(os.path.exists(screenshotName+".png")):
+			if(os.path.exists(os.path.join(outputdir, screenshotName+".png"))):
 				if(debug):
 			 		print "[-] Screenshot already exists, skipping"
 				continue
@@ -262,11 +262,11 @@ def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts,
 				resp = doGet(curUrl, verify=False, timeout=tout, vhosts=vhosts, urlQueue=urlQueue, subs=subs, extraHosts=extraHosts,proxy=proxy)
 			if(resp is not None and resp.status_code == 401):
 				print curUrl[0]+" Requires HTTP Basic Auth"
-				f = open(screenshotName+".html",'w')
+				f = open(os.path.join(outputdir, screenshotName+".html"),'w')
 				f.write(resp.headers.get('www-authenticate','NONE'))
 				f.write('<title>Basic Auth</title>')
 				f.close()
-				writeImage(resp.headers.get('www-authenticate','NO WWW-AUTHENTICATE HEADER'),screenshotName+".png")
+				writeImage(resp.headers.get('www-authenticate','NO WWW-AUTHENTICATE HEADER'),screenshotName+".png", outputdir)
 				continue
 
 			elif(resp is not None):
@@ -311,10 +311,10 @@ def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts,
 							else:
 								print '[+] Saving: '+screenshotName
 								html_source = browser2.page_source
-								f = open(screenshotName+".html",'w')
+								f = open(os.path.join(outputdir, screenshotName+".html"),'w')
 								f.write(html_source)
 								f.close()
-								browser2.save_screenshot(screenshotName+".png")
+								browser2.save_screenshot(os.path.join(outputdir, screenshotName+".png"))
 								browser2.quit()
 								continue
 						except:
@@ -336,10 +336,10 @@ def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts,
 							else:
 								print '[+] Saving: '+screenshotName
 								html_source = browser2.page_source
-								f = open(screenshotName+".html",'w')
+								f = open(os.path.join(outputdir, screenshotName+".html"),'w')
 								f.write(html_source)
 								f.close()
-								browser2.save_screenshot(screenshotName+".png")
+								browser2.save_screenshot(os.path.join(outputdir, screenshotName+".png"))
 								browser2.quit()
 								continue
 						except:
@@ -352,10 +352,10 @@ def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts,
 
 				print '[+] Saving: '+screenshotName
 				html_source = browser.page_source
-				f = open(screenshotName+".html",'w')
+				f = open(os.path.join(outputdir, screenshotName+".html"),'w')
 				f.write(html_source)
 				f.close()
-				browser.save_screenshot(screenshotName+".png")
+				browser.save_screenshot(os.path.join(outputdir, screenshotName+".png"))
 
 		except Exception as e:
 			print e
@@ -489,6 +489,7 @@ if __name__ == '__main__':
 
 	parser.add_argument("-l","--list",help='List of input URLs')
 	parser.add_argument("-i","--input",help='nmap gnmap/xml output file')
+	parser.add_argument("-o","--output_dir",help='directory to store screenshots')
 	parser.add_argument("-p","--headless",action='store_true',default=False,help='Run in headless mode (using phantomjs)')
 	parser.add_argument("-w","--workers",default=1,type=int,help='number of threads')
 	parser.add_argument("-t","--timeout",type=int,default=10,help='time to wait for pageload before killing the browser')
@@ -554,7 +555,11 @@ if __name__ == '__main__':
 	else:
 		print "No input specified"
 		sys.exit(0)
-	
+
+	if (args.output_dir is not None):
+		output_dir = args.output_dir
+	else:
+		output_dir = os.getcwd()
 
 	#shuffle the url list
 	shuffle(urls)
@@ -572,7 +577,7 @@ if __name__ == '__main__':
 	hash_basket   = {}
 
 	for i in range(args.workers):
-		p = multiprocessing.Process(target=worker, args=(urlQueue, args.timeout, args.verbose, args.headless, args.autodetect, args.vhosts, subs, hostsDict, args.trygui, args.smartfetch,args.proxy))
+		p = multiprocessing.Process(target=worker, args=(urlQueue, args.timeout, args.verbose, args.headless, args.autodetect, args.vhosts, subs, hostsDict, args.trygui, args.smartfetch,args.proxy, output_dir))
 		workers.append(p)
 		p.start()
 	
