@@ -489,6 +489,7 @@ if __name__ == '__main__':
 
 	parser.add_argument("-l","--list",help='List of input URLs')
 	parser.add_argument("-i","--input",help='nmap gnmap/xml output file')
+	parser.add_argument("-H","--host",help='Run against a single host')
 	parser.add_argument("-o","--output_dir",help='directory to store screenshots')
 	parser.add_argument("-p","--headless",action='store_true',default=False,help='Run in headless mode (using phantomjs)')
 	parser.add_argument("-w","--workers",default=1,type=int,help='number of threads')
@@ -517,44 +518,48 @@ if __name__ == '__main__':
 		uris = open(args.uri_list,'r').readlines()
 		uris.append('')
 
-	if(args.input is not None):
-		inFile = open(args.input,'rU')
-		if(detectFileType(inFile) == 'gnmap'):
-			hosts = parseGnmap(inFile,args.autodetect)
-			urls = []
-			for host,ports in hosts.items():
-				for port in ports:
-					for uri in uris:
-						url = ''
-						if port[1] == True:
-							url = ['https://'+host+':'+port[0]+uri.strip(),args.vhosts,args.retries]
-						else:
-							url = ['http://'+host+':'+port[0]+uri.strip(),args.vhosts,args.retries]
-						urls.append(url)
-		elif(detectFileType(inFile) == 'xml'):
-			hosts = parsexml(inFile)
-			urls = []
-			for host,ports in hosts.items():
-				for port in ports:
-					for uri in uris:
-						url = ''
-						if port[1] == True:
-							url = ['https://'+host+':'+port[0]+uri.strip(),args.vhosts,args.retries]
-						else:
-							url = ['http://'+host+':'+port[0]+uri.strip(),args.vhosts,args.retries]
-						urls.append(url)
-		else:
-			print 'Invalid input file - must be Nmap GNMAP or Nmap XML'
-	
-	elif (args.list is not None):
-		f = open(args.list,'r')
-		lst = f.readlines()
-		urls = []
-		for url in lst:
-			urls.append([url.strip(),args.vhosts,args.retries])
+	urls = []
+	if(args.host is not None):
+		urls.append([args.host, args.vhosts, args.retries])
 	else:
-		print "No input specified"
-		sys.exit(0)
+		if(args.input is not None):
+			inFile = open(args.input,'rU')
+			if(detectFileType(inFile) == 'gnmap'):
+				hosts = parseGnmap(inFile,args.autodetect)
+				urls = []
+				for host,ports in hosts.items():
+					for port in ports:
+						for uri in uris:
+							url = ''
+							if port[1] == True:
+								url = ['https://'+host+':'+port[0]+uri.strip(),args.vhosts,args.retries]
+							else:
+								url = ['http://'+host+':'+port[0]+uri.strip(),args.vhosts,args.retries]
+							urls.append(url)
+			elif(detectFileType(inFile) == 'xml'):
+				hosts = parsexml(inFile)
+				urls = []
+				for host,ports in hosts.items():
+					for port in ports:
+						for uri in uris:
+							url = ''
+							if port[1] == True:
+								url = ['https://'+host+':'+port[0]+uri.strip(),args.vhosts,args.retries]
+							else:
+								url = ['http://'+host+':'+port[0]+uri.strip(),args.vhosts,args.retries]
+							urls.append(url)
+			else:
+				print 'Invalid input file - must be Nmap GNMAP or Nmap XML'
+
+		elif (args.list is not None):
+			f = open(args.list,'r')
+			lst = f.readlines()
+			urls = []
+			for url in lst:
+				urls.append([url.strip(),args.vhosts,args.retries])
+		else:
+			print "No input specified"
+			sys.exit(0)
 
 	if (args.output_dir is not None):
 		output_dir = args.output_dir
