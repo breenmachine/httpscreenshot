@@ -211,7 +211,7 @@ def writeImage(text, filename, outputdir, fontsize=40, width=1024, height=200):
 	image.save(os.path.join(outputdir, filename))
 
 
-def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts, tryGUIOnFail, smartFetch, proxy, outputdir):
+def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts, tryGUIOnFail, smartFetch, proxy, outputdir, filename):
 	if(debug):
 		print '[*] Starting worker'
 	
@@ -241,7 +241,10 @@ def worker(urlQueue, tout, debug, headless, doProfile, vhosts, subs, extraHosts,
 			except Queue.Empty:
 				continue
 			print '[+] '+str(urlQueue.qsize())+' URLs remaining'
-			screenshotName = quote(curUrl[0], safe='')
+			if not filename:
+				screenshotName = quote(curUrl[0], safe='')
+			else:
+				screenshotName = filename
 			if(debug):
 				print '[+] Got URL: '+curUrl[0]
 				print '[+] screenshotName: '+screenshotName
@@ -490,7 +493,8 @@ if __name__ == '__main__':
 	parser.add_argument("-l","--list",help='List of input URLs')
 	parser.add_argument("-i","--input",help='nmap gnmap/xml output file')
 	parser.add_argument("-H","--host",help='Run against a single host')
-	parser.add_argument("-o","--output_dir",help='directory to store screenshots')
+	parser.add_argument("-oD","--output_dir",help='Directory to store screenshots')
+	parser.add_argument("-oF","--output_filename",help='Filename of screenshot')
 	parser.add_argument("-p","--headless",action='store_true',default=False,help='Run in headless mode (using phantomjs)')
 	parser.add_argument("-w","--workers",default=1,type=int,help='number of threads')
 	parser.add_argument("-t","--timeout",type=int,default=10,help='time to wait for pageload before killing the browser')
@@ -582,7 +586,7 @@ if __name__ == '__main__':
 	hash_basket   = {}
 
 	for i in range(args.workers):
-		p = multiprocessing.Process(target=worker, args=(urlQueue, args.timeout, args.verbose, args.headless, args.autodetect, args.vhosts, subs, hostsDict, args.trygui, args.smartfetch,args.proxy, output_dir))
+		p = multiprocessing.Process(target=worker, args=(urlQueue, args.timeout, args.verbose, args.headless, args.autodetect, args.vhosts, subs, hostsDict, args.trygui, args.smartfetch,args.proxy, output_dir, args.output_filename))
 		workers.append(p)
 		p.start()
 	
