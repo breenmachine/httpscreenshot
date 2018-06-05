@@ -523,8 +523,11 @@ if __name__ == '__main__':
 		uris.append('')
 
 	urls = []
+	output_filename = None
 	if(args.host is not None):
 		urls.append([args.host, args.vhosts, args.retries])
+		if(args.output_filename is not None):
+			output_filename = args.output_filename
 	else:
 		if(args.input is not None):
 			inFile = open(args.input,'rU')
@@ -586,7 +589,7 @@ if __name__ == '__main__':
 	hash_basket   = {}
 
 	for i in range(args.workers):
-		p = multiprocessing.Process(target=worker, args=(urlQueue, args.timeout, args.verbose, args.headless, args.autodetect, args.vhosts, subs, hostsDict, args.trygui, args.smartfetch,args.proxy, output_dir, args.output_filename))
+		p = multiprocessing.Process(target=worker, args=(urlQueue, args.timeout, args.verbose, args.headless, args.autodetect, args.vhosts, subs, hostsDict, args.trygui, args.smartfetch,args.proxy, output_dir, output_filename))
 		workers.append(p)
 		p.start()
 	
