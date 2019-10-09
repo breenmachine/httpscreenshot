@@ -189,8 +189,11 @@ def setupBrowserProfile(headless,proxy):
 					fp.set_preference("network.proxy.type",1)
 				browser = webdriver.Firefox(firefox_profile=fp,capabilities=capabilities)
 			else:
-				browser = webdriver.PhantomJS(service_args=service_args, executable_path="phantomjs")
-				browser.set_window_size(1024, 768)
+                                coptions = webdriver.ChromeOptions()
+                                coptions.add_argument('headless')
+                                coptions.add_argument('--no-sandbox')
+                                browser = webdriver.Chrome(chrome_options=coptions)
+                                browser.set_window_size(1024, 768)
 
 		except Exception as e:
 			print e
