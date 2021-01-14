@@ -3,6 +3,6 @@ requests
 selenium
 beautifulsoup4
 pillow
-requesocks
+PySocks
 python-libnmap
 pyvirtualdisplay

@@ -1,8 +1,8 @@
 # docker pull andmyhacks/httpscreenshot
 
-FROM ubuntu:latest
+FROM ubuntu:20.04
 
-MAINTAINER Keith Hoodlet <keith@attackdriven.io>
+MAINTAINER Jesse Osiecki <jesse@jjo.ninja>
 
 RUN mkdir -p /etc/httpscreenshot
 WORKDIR /etc/httpscreenshot
@@ -10,7 +10,7 @@ WORKDIR /etc/httpscreenshot
 COPY . /etc/httpscreenshot/
 
 RUN apt-get update
-RUN apt-get install -y wget libfontconfig vim
+RUN apt-get install -y wget libfontconfig
 
 RUN ./install-dependencies.sh
 
