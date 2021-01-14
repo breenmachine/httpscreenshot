@@ -1,10 +1,4 @@
 #!/usr/bin/python3
-"""
-Installation on Ubuntu:
-apt-get install python-requests python-m2crypto phantomjs
-If you run into: 'module' object has no attribute 'PhantomJS'
-then pip install selenium (or pip install --upgrade selenium)
-"""
 
 from selenium import webdriver
 from urllib.parse import urlparse
@@ -185,28 +179,28 @@ def setupBrowserProfile(headless, proxy):
 
     while browser is None:
         try:
-            if not headless:
-                capabilities = DesiredCapabilities.FIREFOX
-                capabilities["acceptSslCerts"] = True
-                fp = webdriver.FirefoxProfile()
-                fp.set_preference("webdriver.accept.untrusted.certs", True)
-                fp.set_preference("security.enable_java", False)
-                fp.set_preference("webdriver.load.strategy", "fast")
-                if proxy is not None:
-                    proxyItems = proxy.split(":")
-                    fp.set_preference("network.proxy.socks", proxyItems[0])
-                    fp.set_preference("network.proxy.socks_port",
-                                      int(proxyItems[1]))
-                    fp.set_preference("network.proxy.type", 1)
-                browser = webdriver.Firefox(firefox_profile=fp,
-                                            capabilities=capabilities)
-            else:
-                capabilities = DesiredCapabilities.FIREFOX
-                capabilities["acceptSslCerts"] = True
-                fireFoxOptions = webdriver.FirefoxOptions()
+            capabilities = DesiredCapabilities.FIREFOX
+            capabilities["acceptSslCerts"] = True
+            fp = webdriver.FirefoxProfile()
+            fp.set_preference("webdriver.accept.untrusted.certs", True)
+            fp.set_preference("security.enable_java", False)
+            fp.set_preference("webdriver.load.strategy", "fast")
+            if proxy is not None:
+                proxyItems = proxy.split(":")
+                fp.set_preference("network.proxy.socks", proxyItems[0])
+                fp.set_preference("network.proxy.socks_port",
+                                  int(proxyItems[1]))
+                fp.set_preference("network.proxy.type", 1)
+
+            fireFoxOptions = webdriver.FirefoxOptions()
+
+            if headless:
                 fireFoxOptions.set_headless()
-                browser = webdriver.Firefox(firefox_options=fireFoxOptions, capabilities=capabilities)
-                browser.set_window_size(1024, 768)
+
+            browser = webdriver.Firefox(firefox_profile=fp,
+                                            capabilities=capabilities,
+                                            options=fireFoxOptions)
+            browser.set_window_size(1024, 768)
 
         except Exception as e:
             print(e)
@@ -339,7 +333,6 @@ def worker(
                     if smartFetch:
                         hash_basket[resp_hash] = screenshotName
 
-                # browser.set_window_size(1024, 768)
                 browser.set_page_load_timeout((tout))
                 old_url = browser.current_url
                 browser.get(curUrl[0].strip())
@@ -347,53 +340,6 @@ def worker(
                     print(
                         "[-] Error fetching in browser but successfully fetched with Requests: "
                         + curUrl[0])
-                    if headless:
-                        browser2 = None
-                        if debug:
-                            print(
-                                "[+] Trying with sslv3 instead of TLS - known phantomjs bug: "
-                                + curUrl[0])
-                        if proxy is not None:
-                            browser2 = webdriver.PhantomJS(
-                                service_args=[
-                                    "--ignore-ssl-errors=true",
-                                    "--proxy=" + proxy,
-                                    "--proxy-type=socks5",
-                                ],
-                                executable_path="phantomjs",
-                            )
-                        else:
-                            browser2 = webdriver.PhantomJS(
-                                service_args=["--ignore-ssl-errors=true"],
-                                executable_path="phantomjs",
-                            )
-                            # print "Launched browser2: "+str(browser2.service.process.pid)
-
-                        old_url = browser2.current_url
-                        try:
-                            browser2.get(curUrl[0].strip())
-                            if browser2.current_url == old_url:
-                                if debug:
-                                    print(
-                                        "[-] Didn't work with SSLv3 either..."
-                                        + curUrl[0])
-                                browser2.quit()
-                            else:
-                                print("[+] Saving: " + screenshotName)
-                                html_source = browser2.page_source
-                                f = open(screenshotName + ".html", "w")
-                                f.write(html_source)
-                                f.close()
-                                browser2.save_screenshot(screenshotName +
-                                                         ".png")
-                                browser2.quit()
-                                continue
-                        except:
-                            browser2.quit()
-                            print(
-                                "[-] Didn't work with SSLv3 either - exception..."
-                                + curUrl[0])
-
                     if tryGUIOnFail and headless:
                         display = Display(visible=0, size=(1024, 768))
                         display.start()
