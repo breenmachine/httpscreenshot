@@ -1,27 +1,26 @@
 #!/usr/bin/python3
 
-from selenium import webdriver
-from urllib.parse import urlparse
-from random import shuffle
-from PIL import Image
-from PIL import ImageDraw
-from PIL import ImageFont
-from libnmap.parser import NmapParser
-import multiprocessing
-import queue
 import argparse
-import sys
-import traceback
-import os.path
-import ssl
-import M2Crypto
-import re
-import time
-import signal
-import shutil
 import hashlib
+import multiprocessing
+import os.path
+import queue
+import re
+import shutil
+import signal
+import ssl
+import sys
+import time
+import traceback
 from importlib import reload
+from random import shuffle
+from urllib.parse import urlparse
+
+import M2Crypto
+from libnmap.parser import NmapParser
+from PIL import Image, ImageDraw, ImageFont
 from pyvirtualdisplay import Display
+from selenium import webdriver
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 try:
@@ -90,7 +89,8 @@ def detectFileType(inFile):
             )
             return "gnmap"
     elif (firstLine.find("xml version") !=
-          -1) and secondLine.find("DOCTYPE nmaprun") != -1:
+          -1) and (secondLine.find("DOCTYPE nmaprun") != -1
+                   or secondLine.find("masscan") != -1):
         return "xml"
     else:
         return None
@@ -198,8 +198,8 @@ def setupBrowserProfile(headless, proxy):
                 fireFoxOptions.set_headless()
 
             browser = webdriver.Firefox(firefox_profile=fp,
-                                            capabilities=capabilities,
-                                            options=fireFoxOptions)
+                                        capabilities=capabilities,
+                                        options=fireFoxOptions)
             browser.set_window_size(1024, 768)
 
         except Exception as e:
@@ -316,7 +316,8 @@ def worker(
 
             elif resp is not None:
                 if resp.text is not None:
-                    resp_hash = hashlib.md5(resp.text.encode('utf-8')).hexdigest()
+                    resp_hash = hashlib.md5(
+                        resp.text.encode('utf-8')).hexdigest()
                 else:
                     resp_hash = None
 
