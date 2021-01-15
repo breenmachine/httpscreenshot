@@ -8,6 +8,7 @@ import queue
 import re
 import shutil
 import signal
+import socket
 import ssl
 import sys
 import time
@@ -38,8 +39,6 @@ reload(sys)
 
 
 def timeoutFn(func, args=(), kwargs={}, timeout_duration=1, default=None):
-    import signal
-
     class TimeoutError(Exception):
         pass
 
@@ -60,11 +59,11 @@ def timeoutFn(func, args=(), kwargs={}, timeout_duration=1, default=None):
 
 
 def addUrlsForService(host, urlList, servicesList, scheme):
-    if servicesList == None or servicesList == []:
+    if servicesList is None or servicesList == []:
         return
     for service in servicesList:
         state = service.findPreviousSibling("state")
-        if state != None and state != [] and state["state"] == "open":
+        if state is not None and state != [] and state["state"] == "open":
             urlList.append(scheme + host + ":" + str(service.parent["portid"]))
 
 
@@ -195,7 +194,7 @@ def setupBrowserProfile(headless, proxy):
             fireFoxOptions = webdriver.FirefoxOptions()
 
             if headless:
-                fireFoxOptions.set_headless()
+                fireFoxOptions.headless = True
 
             browser = webdriver.Firefox(firefox_profile=fp,
                                         capabilities=capabilities,
@@ -248,7 +247,7 @@ def worker(
 
         browser = setupBrowserProfile(headless, proxy)
 
-    except:
+    except Exception:
         print("[-] Oh no! Couldn't create the browser, Selenium blew up")
         exc_type, exc_value, exc_traceback = sys.exc_info()
         lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
@@ -366,7 +365,7 @@ def worker(
                                                          ".png")
                                 browser2.quit()
                                 continue
-                        except:
+                        except Exception:
                             browser2.quit()
                             display.stop()
                             print(
@@ -419,7 +418,7 @@ def doGet(*args, **kwargs):
     resp = session.get(url[0], **kwargs)
 
     # If we have an https URL and we are configured to scrape hosts from the cert...
-    if url[0].find("https") != -1 and url[1] == True:
+    if url[0].find("https") != -1 and url[1] is True:
         # Pull hostnames from cert, add as additional URLs and flag as not to pull certs
         host = urlparse(url[0]).hostname
         port = urlparse(url[0]).port
@@ -434,8 +433,8 @@ def doGet(*args, **kwargs):
             names = re.findall("CN=([^\s]+)", subjText)
             altNames = x509.get_ext("subjectAltName").get_value()
             names.extend(re.findall("DNS:([^,]*)", altNames))
-        except:
-            pass
+        except Exception as e:
+            print(e)
 
         for name in names:
             if name.find("*.") != -1:
@@ -451,7 +450,7 @@ def doGet(*args, **kwargs):
                                 url[2]
                             ])
                             print("[+] Discovered subdomain " + address)
-                    except:
+                    except Exception:
                         pass
                 name = name.replace("*.", "")
                 if name not in extraHosts:
@@ -510,7 +509,7 @@ def autodetectRequest(url,
             url[0] = url[0].replace("https", "http")
             # print 'Changing to HTTP '+url[0]
 
-    except Exception as e:
+    except Exception:
         url[0] = url[0].replace("https", "http")
         # print 'Changing to HTTP '+url[0]
     try:
@@ -641,7 +640,7 @@ if __name__ == "__main__":
 
     # read in the URI list if specificed
     uris = [""]
-    if args.uri_list != None:
+    if args.uri_list is not None:
         uris = open(args.uri_list, "r").readlines()
         uris.append("")
 
@@ -654,7 +653,7 @@ if __name__ == "__main__":
                 for port in ports:
                     for uri in uris:
                         url = ""
-                        if port[1] == True:
+                        if port[1]:
                             url = [
                                 "https://" + host + ":" + port[0] +
                                 uri.strip(),
@@ -675,7 +674,7 @@ if __name__ == "__main__":
                 for port in ports:
                     for uri in uris:
                         url = ""
-                        if port[1] == True:
+                        if port[1]:
                             url = [
                                 "https://" + host + ":" + port[0] +
                                 uri.strip(),
@@ -707,7 +706,7 @@ if __name__ == "__main__":
 
     # read in the subdomain bruteforce list if specificed
     subs = []
-    if args.dns_brute != None:
+    if args.dns_brute is not None:
         subs = open(args.dns_brute, "r").readlines()
 
     # Fire up the workers
