@@ -6,3 +6,4 @@ pillow
 PySocks
 python-libnmap
 pyvirtualdisplay
+reload

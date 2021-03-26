@@ -125,16 +125,26 @@ def parseGnmap(inFile, autodetect):
     >>> targets
     {'127.0.0.1': [[443, True], [8080, False]]}
     """
+    hostRe=re.compile('Host:\s*[^\s]+')
+    servicesRe=re.compile('Ports:\s*.*')
     targets = {}
     for hostLine in inFile:
         if hostLine.strip() == "":
             break
         currentTarget = []
         # Pull out the IP address (or hostnames) and HTTP service ports
-        fields = hostLine.split(" ")
-        ip = fields[
-            1]  # not going to regex match this with ip address b/c could be a hostname
-        for item in fields:
+        
+        ipHostRes = hostRe.search(hostLine)
+
+        if ipHostRes is None:
+            continue
+
+        ipHost = ipHostRes.group()
+        ip = ipHost.split(':')[1].strip()
+
+        services = servicesRe.search(hostLine).group().split()
+
+        for item in services:
             # Make sure we have an open port with an http type service on it
             if (item.find("http") != -1 or autodetect) and re.findall(
                     "\d+/open", item):
@@ -160,7 +170,10 @@ def parseGnmap(inFile, autodetect):
                 currentTarget.append([port, https])
 
         if len(currentTarget) > 0:
-            targets[ip] = currentTarget
+            if ip in targets:
+                targets[ip].extend(currentTarget)
+            else:
+                targets[ip] = currentTarget
     return targets
 
 
