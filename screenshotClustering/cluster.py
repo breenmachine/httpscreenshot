@@ -16,11 +16,11 @@ except:
 def addAttrToBag(attrName,url,link,wordBags,soup):
 	for tag in soup.findAll('',{attrName:True}):
 		if(isinstance(tag[attrName],str) or isinstance(tag[attrName],unicode)):
-			tagStr = tag[attrName].encode('utf-8').strip()
+			tagStr = tag[attrName].encode('ISO-8859-1').strip()
 		elif(isinstance(tag[attrName],list)):
-			tagStr = tag[attrName][0].encode('utf-8').strip()
+			tagStr = tag[attrName][0].encode('ISO-8859-1').strip()
 		else:
-			print '[-] Strange tag type detected - '+str(type(tag[attrName]))
+			print('[-] Strange tag type detected - '+str(type(tag[attrName])))
 			tagStr = 'XXXXXXXXX'
 
 		if(tagStr != ''):
@@ -51,7 +51,7 @@ def createWordBags(htmlList):
 	wordBags={}
 
 	for f in htmlList:
-		htmlContent = open(f,'r').read()
+		htmlContent = open(f,'r', encoding='ISO-8859-1').read()
 		wordBags[f]={}
 		soup = BeautifulSoup(htmlContent, 'html.parser')
 		addAttrToBag('name',f,False,wordBags,soup)
@@ -77,11 +77,11 @@ def computeScore(wordBag1,wordBag2,debug=0):
 
 	if(len(wordBag1) == 0 and len(wordBag2) == 0):
 		if debug:
-			print 'Both have no words - return true'
+			print('Both have no words - return true')
 		return 1
 	elif (len(wordBag1) == 0 or len(wordBag2) == 0):
 		if debug:
-			print 'One has no words - return false'
+			print('One has no words - return false')
 		return 0
 
 	for word in wordBag1.keys():
@@ -90,17 +90,17 @@ def computeScore(wordBag1,wordBag2,debug=0):
 	score = (float(commonWords)/float(wordBag1Length)*(float(commonWords)/float(wordBag2Length)))
 
 	if debug:
-		print "Common Words: "+str(commonWords)
-		print "WordBag1 Length: "+str(wordBag1Length)
-		print "WordBag2 Length: "+str(wordBag2Length)
-		print score
+		print("Common Words: "+str(commonWords))
+		print("WordBag1 Length: "+str(wordBag1Length))
+		print("WordBag2 Length: "+str(wordBag2Length))
+		print(score)
 
 	return score
 
 def createClusters(wordBags,threshold):
 	clusterData = {}
 	i = 0
-	siteList = wordBags.keys()
+	siteList = list(wordBags.keys())
 	for i in range(0,len(siteList)):
 		clusterData[siteList[i]] = [threshold, i]
 
@@ -126,7 +126,7 @@ def getScopeHtml(scopeFile):
 
 def getPageTitle(htmlFile):
 	"""Simple function to yank page title from html"""
-	with open(htmlFile, 'r') as f:
+	with open(htmlFile, 'r', encoding='ISO-8859-1') as f:
 		soup = BeautifulSoup(f, "lxml")
 	try:
 		return soup.title.string.encode('ascii', 'ignore')
@@ -151,12 +151,16 @@ def renderClusterHtml(clust,width,height,scopeFile=None):
         </div>
 		'''
 	for cluster, siteList in clust.items():
+		try:
+			title = getPageTitle(siteList[0]).decode("ISO-8859-1")
+		except (UnicodeDecodeError, AttributeError):
+			title = getPageTitle(siteList[0])
 		html = html + """
 			<table class="table-fill">
 			<thead>
 				<TR>
 					<th class="text-left" colspan="2">
-						""" + getPageTitle(siteList[0]) + """ </th>
+						""" + title + """ </th>
 				</TR>
 			</thead>
 				<TR>
@@ -166,9 +170,9 @@ def renderClusterHtml(clust,width,height,scopeFile=None):
 		for site in siteList:
 			screenshotName = quote(site[0:-5], safe='./')
 			if site != siteList[-1]:
-				html = html + '<div onmouseout="clearPopup()" onmouseover="popUp(event,\''+screenshotName+'.png\');"><a href="'+unquote(unquote(screenshotName[2:]).decode("utf-8")).decode("utf-8")+'">'+unquote(unquote(screenshotName[2:]).decode("utf-8")).decode("utf-8")+'</a><br /></div>'
+				html = html + f"<div onmouseout=\"clearPopup()\" onmouseover=\"popUp(event,'{screenshotName}.png');\"><a href=\"{unquote(unquote(screenshotName[2:]))}\">{unquote(unquote(screenshotName[2:]))}</a><br /></div>"
 			else:
-				html = html + '<div onmouseout="clearPopup()" onmouseover="popUp(event,\''+screenshotName+'.png\');"><a href="'+unquote(unquote(screenshotName[2:]).decode("utf-8")).decode("utf-8")+'">'+unquote(unquote(screenshotName[2:]).decode("utf-8")).decode("utf-8")+'</a></div> </TD></TR></table>'
+				html = html + f"<div onmouseout=\"clearPopup()\" onmouseover=\"popUp(event,'{screenshotName}.png');\"><a href=\"{unquote(unquote(screenshotName[2:]))}\">{unquote(unquote(screenshotName[2:]))}</a></div> </TD></TR></table>"
 
 
 	footer = '</BODY></HTML>'
@@ -362,7 +366,7 @@ def doCluster(htmlList):
 	clusterData = createClusters(siteWordBags,0.6)
 
 	clusterDict = {}
-	for site,data in clusterData.iteritems():
+	for site,data in clusterData.items():
 		if data[1] in clusterDict:
 			clusterDict[data[1]].append(site)
 		else:
