@@ -1,4 +1,4 @@
-# Installation Script - tested on an ubuntu/trusty64 vagrant box
+# Installation Script - tested on a fresh install of Ubuntu 20.04.3 LTS
 
 # Show all commands being run
 #set -x
@@ -6,17 +6,12 @@
 # Error out if one fails
 set -e
 
-apt-get install -y swig swig3.0 libssl-dev python3-dev libjpeg-dev xvfb firefox firefox-geckodriver
+# Pull packages from apt
+sudo apt install -y python3-pip build-essential libssl-dev swig python3-dev
 
-# Newer version in PyPI
-#apt-get install -y python-requests
+# Install Google Chrome
+wget -O /tmp/google-chrome-stable_current_amd64.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+sudo apt install -y /tmp/google-chrome-stable_current_amd64.deb
 
-# Newer version in PyPI
-#apt-get install -y python-m2crypto
-
-# Installing pillow from PIP for the latest
-#apt-get install -y python-pil
-
-# Install pip and install pytnon requirements through it
-apt-get install -y python3-pip
+# Install required python packages
 pip3 install -r requirements.txt

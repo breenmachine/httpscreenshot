@@ -7,3 +7,5 @@ PySocks
 python-libnmap
 pyvirtualdisplay
 reload
+webdriver_manager
+lxml

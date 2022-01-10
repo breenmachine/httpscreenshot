@@ -8,7 +8,6 @@ import queue
 import re
 import shutil
 import signal
-import socket
 import ssl
 import sys
 import time
@@ -16,13 +15,20 @@ import traceback
 from importlib import reload
 from random import shuffle
 from urllib.parse import urlparse
+from collections import defaultdict
+
+import warnings
+
+warnings.filterwarnings("ignore")
 
 import M2Crypto
-from libnmap.parser import NmapParser
 from PIL import Image, ImageDraw, ImageFont
 from pyvirtualdisplay import Display
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from webdriver_manager.chrome import ChromeDriverManager
 
 try:
     from urllib.parse import quote
@@ -32,7 +38,6 @@ except Exception:
 try:
     import requesocks as requests
 except Exception:
-    print("requesocks library not found - proxy support will not be available")
     import requests
 
 reload(sys)
@@ -76,8 +81,7 @@ def detectFileType(inFile):
     # Be polite and reset the file pointer
     inFile.seek(0)
 
-    if (firstLine.find("nmap") != -1 or
-            firstLine.find("Masscan") != -1) and thirdLine.find("Host:") != -1:
+    if (firstLine.find("nmap") != -1 or firstLine.find("Masscan") != -1) and thirdLine.find("Host:") != -1:
         # Looks like a gnmap file - this wont be true for other nmap output types
         # Check to see if -sV flag was used, if not, warn
         if firstLine.find("-sV") != -1 or firstLine.find("-A") != -1:
@@ -96,44 +100,34 @@ def detectFileType(inFile):
 
 
 def parsexml(inFile):
-    targets = {}
-    infile = NmapParser.parse_fromfile(args.input)
-    for host in infile.hosts:
-        if host.services:
-            currentTarget = []
-            for s in host.services:
-                if s.state != "closed" and "http" in s.service:
-                    ip = host.address
-                    port = str(s.port)
-                    https = False
-                    if "https" in s.service or "ssl" in s.service:
-                        https = True
+    import xml.etree.ElementTree as ET
 
-                    currentTarget.append([port, https])
+    tree = ET.parse(inFile)
+    root = tree.getroot()
 
-            if len(currentTarget) > 0:
-                targets[ip] = currentTarget
+    targets = defaultdict(list)
+
+    for host in root.findall("host"):
+        ip = host.find('address').get('addr')
+
+        for port in host.find('ports').findall("port"):
+            if port.find("state").get("state") == "open":
+                targets[ip].append(port.get("portid"))
 
     return targets
-    print("Parsing is complete, continue on...")
 
 
 def parseGnmap(inFile, autodetect):
-    """
-    Parse a gnmap file into a dictionary. The dictionary key is the ip address or hostname.
-    Each key item is a list of ports and whether or not that port is https/ssl. For example:
-    >>> targets
-    {'127.0.0.1': [[443, True], [8080, False]]}
-    """
-    hostRe=re.compile('Host:\s*[^\s]+')
-    servicesRe=re.compile('Ports:\s*.*')
-    targets = {}
+    hostRe = re.compile('Host:\s*[^\s]+')
+    servicesRe = re.compile('Ports:\s*.*')
+
+    targets = defaultdict(list)
+
     for hostLine in inFile:
         if hostLine.strip() == "":
             break
-        currentTarget = []
         # Pull out the IP address (or hostnames) and HTTP service ports
-        
+
         ipHostRes = hostRe.search(hostLine)
 
         if ipHostRes is None:
@@ -142,12 +136,14 @@ def parseGnmap(inFile, autodetect):
         ipHost = ipHostRes.group()
         ip = ipHost.split(':')[1].strip()
 
-        services = servicesRe.search(hostLine).group().split()
+        try:
+            services = servicesRe.search(hostLine).group().split()
+        except:
+            continue
 
         for item in services:
             # Make sure we have an open port with an http type service on it
-            if (item.find("http") != -1 or autodetect) and re.findall(
-                    "\d+/open", item):
+            if re.findall("\d+/open", item):
                 port = None
                 https = False
                 """
@@ -163,56 +159,43 @@ def parseGnmap(inFile, autodetect):
                                 construct the URLs.
                                 """
                 port = item.split("/")[0]
+                targets[ip].append(port)
 
-                if item.find("https") != -1 or item.find("ssl") != -1:
-                    https = True
-                # Add the current service item to the currentTarget list for this host
-                currentTarget.append([port, https])
-
-        if len(currentTarget) > 0:
-            if ip in targets:
-                targets[ip].extend(currentTarget)
-            else:
-                targets[ip] = currentTarget
     return targets
 
 
 def setupBrowserProfile(headless, proxy):
     browser = None
-    if proxy is not None:
-        service_args = [
-            "--ignore-ssl-errors=true",
-            "--ssl-protocol=any",
-            "--proxy=" + proxy,
-            "--proxy-type=socks5",
-        ]
+    if (proxy is not None):
+        service_args = ['--ignore-ssl-errors=true', '--ssl-protocol=any', '--proxy=' + proxy, '--proxy-type=socks5']
     else:
-        service_args = ["--ignore-ssl-errors=true", "--ssl-protocol=any"]
+        service_args = ['--ignore-ssl-errors=true', '--ssl-protocol=any']
 
-    while browser is None:
+    while (browser is None):
         try:
-            capabilities = DesiredCapabilities.FIREFOX
-            capabilities["acceptSslCerts"] = True
-            fp = webdriver.FirefoxProfile()
-            fp.set_preference("webdriver.accept.untrusted.certs", True)
-            fp.set_preference("security.enable_java", False)
-            fp.set_preference("webdriver.load.strategy", "fast")
-            if proxy is not None:
-                proxyItems = proxy.split(":")
-                fp.set_preference("network.proxy.socks", proxyItems[0])
-                fp.set_preference("network.proxy.socks_port",
-                                  int(proxyItems[1]))
-                fp.set_preference("network.proxy.type", 1)
+            if (not headless):
+                capabilities = DesiredCapabilities.FIREFOX
+                capabilities['acceptSslCerts'] = True
+                fp = webdriver.FirefoxProfile()
+                fp.set_preference("webdriver.accept.untrusted.certs", True)
+                fp.set_preference("security.enable_java", False)
+                fp.set_preference("webdriver.load.strategy", "fast");
+                if (proxy is not None):
+                    proxyItems = proxy.split(":")
+                    fp.set_preference("network.proxy.socks", proxyItems[0])
+                    fp.set_preference("network.proxy.socks_port", int(proxyItems[1]))
+                    fp.set_preference("network.proxy.type", 1)
+                browser = webdriver.Firefox(firefox_profile=fp, capabilities=capabilities)
+            else:
+                service = Service(ChromeDriverManager(log_level=0).install())
+                coptions = Options()
+                coptions.add_argument("--headless")
+                coptions.add_argument("--no-sandbox")
+                coptions.add_argument("--window-size=1024x768")
+                coptions.add_argument("--ignore-certificate-errors")
+                coptions.add_argument("--ssl-version-min=tls1")
 
-            fireFoxOptions = webdriver.FirefoxOptions()
-
-            if headless:
-                fireFoxOptions.headless = True
-
-            browser = webdriver.Firefox(firefox_profile=fp,
-                                        capabilities=capabilities,
-                                        options=fireFoxOptions)
-            browser.set_window_size(1024, 768)
+                browser = webdriver.Chrome(service=service, options=coptions)
 
         except Exception as e:
             print(e)
@@ -236,17 +219,17 @@ def writeImage(text, filename, fontsize=40, width=1024, height=200):
 
 
 def worker(
-    urlQueue,
-    tout,
-    debug,
-    headless,
-    doProfile,
-    vhosts,
-    subs,
-    extraHosts,
-    tryGUIOnFail,
-    smartFetch,
-    proxy,
+        urlQueue,
+        tout,
+        debug,
+        headless,
+        doProfile,
+        vhosts,
+        subs,
+        extraHosts,
+        tryGUIOnFail,
+        smartFetch,
+        proxy,
 ):
     if debug:
         print("[*] Starting worker")
@@ -277,9 +260,9 @@ def worker(
             except queue.Empty:
                 continue
             print("[+] " + str(urlQueue.qsize()) + " URLs remaining")
-            screenshotName = quote(curUrl[0], safe="")
+            screenshotName = quote(curUrl, safe="")
             if debug:
-                print("[+] Got URL: " + curUrl[0])
+                print("[+] Got URL: " + curUrl)
                 print("[+] screenshotName: " + screenshotName)
             if os.path.exists(screenshotName + ".png"):
                 if debug:
@@ -314,7 +297,7 @@ def worker(
                     proxy=proxy,
                 )
             if resp is not None and resp.status_code == 401:
-                print(curUrl[0] + " Requires HTTP Basic Auth")
+                print(curUrl + " Requires HTTP Basic Auth")
                 f = open(screenshotName + ".html", "w")
                 f.write(resp.headers.get("www-authenticate", "NONE"))
                 f.write("<title>Basic Auth</title>")
@@ -348,24 +331,24 @@ def worker(
 
                 browser.set_page_load_timeout((tout))
                 old_url = browser.current_url
-                browser.get(curUrl[0].strip())
+                browser.get(curUrl.strip())
                 if browser.current_url == old_url:
                     print(
                         "[-] Error fetching in browser but successfully fetched with Requests: "
-                        + curUrl[0])
+                        + curUrl)
                     if tryGUIOnFail and headless:
                         display = Display(visible=0, size=(1024, 768))
                         display.start()
                         print("[+] Attempting to fetch with FireFox: " +
-                              curUrl[0])
+                              curUrl)
                         browser2 = setupBrowserProfile(False, proxy)
                         old_url = browser2.current_url
                         try:
-                            browser2.get(curUrl[0].strip())
+                            browser2.get(curUrl.strip())
                             if browser2.current_url == old_url:
                                 print(
                                     "[-] Error fetching in GUI browser as well..."
-                                    + curUrl[0])
+                                    + curUrl)
                                 browser2.quit()
                                 continue
                             else:
@@ -383,7 +366,7 @@ def worker(
                             display.stop()
                             print(
                                 "[-] Error fetching in GUI browser as well..."
-                                + curUrl[0])
+                                + curUrl)
 
                     else:
                         continue
@@ -396,11 +379,6 @@ def worker(
                 browser.save_screenshot(screenshotName + ".png")
 
         except Exception as e:
-            print(e)
-            print("[-] Something bad happened with URL: " + curUrl[0])
-            if curUrl[2] > 0:
-                curUrl[2] = curUrl[2] - 1
-                urlQueue.put(curUrl)
             if debug:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 lines = traceback.format_exception(exc_type, exc_value,
@@ -428,20 +406,19 @@ def doGet(*args, **kwargs):
             "http": "socks5://" + proxy,
             "https": "socks5://" + proxy
         }
-    resp = session.get(url[0], **kwargs)
+    resp = session.get(url, **kwargs)
 
     # If we have an https URL and we are configured to scrape hosts from the cert...
-    if url[0].find("https") != -1 and url[1] is True:
+    if url.find("https") != -1 and doVhosts is True:
         # Pull hostnames from cert, add as additional URLs and flag as not to pull certs
-        host = urlparse(url[0]).hostname
-        port = urlparse(url[0]).port
+        host = urlparse(url).hostname
+        port = urlparse(url).port
         if port is None:
             port = 443
         names = []
         try:
-            cert = ssl.get_server_certificate((host, port),
-                                              ssl_version=ssl.PROTOCOL_SSLv23)
-            x509 = M2Crypto.X509.load_cert_string(cert.decode("string_escape"))
+            cert = ssl.get_server_certificate((host, port))
+            x509 = M2Crypto.X509.load_cert_string(cert)
             subjText = x509.get_subject().as_text()
             names = re.findall("CN=([^\s]+)", subjText)
             altNames = x509.get_ext("subjectAltName").get_value()
@@ -450,33 +427,10 @@ def doGet(*args, **kwargs):
             print(e)
 
         for name in names:
-            if name.find("*.") != -1:
-                for sub in subs:
-                    try:
-                        sub = sub.strip()
-                        hostname = name.replace("*.", sub + ".")
-                        if hostname not in extraHosts:
-                            extraHosts[hostname] = 1
-                            address = socket.gethostbyname(hostname)
-                            urlQueue.put([
-                                "https://" + hostname + ":" + str(port), False,
-                                url[2]
-                            ])
-                            print("[+] Discovered subdomain " + address)
-                    except Exception:
-                        pass
-                name = name.replace("*.", "")
-                if name not in extraHosts:
-                    extraHosts[name] = 1
-                    urlQueue.put(
-                        ["https://" + name + ":" + str(port), False, url[2]])
-                    print("[+] Added host " + name)
-            else:
-                if name not in extraHosts:
-                    extraHosts[name] = 1
-                    urlQueue.put(
-                        ["https://" + name + ":" + str(port), False, url[2]])
-                    print("[+] Added host " + name)
+            if name not in extraHosts:
+                extraHosts[name] = 1
+                urlQueue.put(f"https://{name}:{port}")
+                print(f"[+] Added host https://{name}:{port}")
         return resp
     else:
         return resp
@@ -492,39 +446,26 @@ def autodetectRequest(url,
     """Takes a URL, ignores the scheme. Detect if the host/port is actually an HTTP or HTTPS
     server"""
     resp = None
-    host = urlparse(url[0]).hostname
-    port = urlparse(url[0]).port
-
-    if port is None:
-        if "https" in url[0]:
-            port = 443
-        else:
-            port = 80
+    host = urlparse(url).hostname
+    port = urlparse(url).port
 
     try:
         # cert = ssl.get_server_certificate((host,port))
 
         cert = timeoutFn(
             ssl.get_server_certificate,
-            kwargs={
-                "addr": (host, port),
-                "ssl_version": ssl.PROTOCOL_SSLv23
-            },
+            kwargs={"addr": (host, port)},
             timeout_duration=3,
         )
 
         if cert is not None:
-            if "https" not in url[0]:
-                url[0] = url[0].replace("http", "https")
-                # print 'Got cert, changing to HTTPS '+url[0]
-
+            if "https" not in url:
+                url = url.replace("http://", "https://")
         else:
-            url[0] = url[0].replace("https", "http")
-            # print 'Changing to HTTP '+url[0]
+            url = url.replace("https://", "http://")
 
     except Exception:
-        url[0] = url[0].replace("https", "http")
-        # print 'Changing to HTTP '+url[0]
+        url = url.replace("https://", "http://")
     try:
         resp = doGet(
             url,
@@ -538,7 +479,7 @@ def autodetectRequest(url,
         )
     except Exception as e:
         print("HTTP GET Error: " + str(e))
-        print(url[0])
+        print(url)
 
     return [resp, url]
 
@@ -658,58 +599,26 @@ if __name__ == "__main__":
         uris.append("")
 
     if args.input is not None:
-        inFile = open(args.input, "rU")
+        inFile = open(args.input, "r")
         if detectFileType(inFile) == "gnmap":
             hosts = parseGnmap(inFile, args.autodetect)
-            urls = []
-            for host, ports in list(hosts.items()):
-                for port in ports:
-                    for uri in uris:
-                        url = ""
-                        if port[1]:
-                            url = [
-                                "https://" + host + ":" + port[0] +
-                                uri.strip(),
-                                args.vhosts,
-                                args.retries,
-                            ]
-                        else:
-                            url = [
-                                "http://" + host + ":" + port[0] + uri.strip(),
-                                args.vhosts,
-                                args.retries,
-                            ]
-                        urls.append(url)
         elif detectFileType(inFile) == "xml":
             hosts = parsexml(inFile)
-            urls = []
-            for host, ports in list(hosts.items()):
-                for port in ports:
-                    for uri in uris:
-                        url = ""
-                        if port[1]:
-                            url = [
-                                "https://" + host + ":" + port[0] +
-                                uri.strip(),
-                                args.vhosts,
-                                args.retries,
-                            ]
-                        else:
-                            url = [
-                                "http://" + host + ":" + port[0] + uri.strip(),
-                                args.vhosts,
-                                args.retries,
-                            ]
-                        urls.append(url)
         else:
             print("Invalid input file - must be Nmap GNMAP or Nmap XML")
+
+        urls = []
+
+        for host in hosts:
+            for port in hosts[host]:
+                urls.append(f"http://{host}:{port}")
 
     elif args.list is not None:
         f = open(args.list, "r")
         lst = f.readlines()
         urls = []
         for url in lst:
-            urls.append([url.strip(), args.vhosts, args.retries])
+            urls.append(url.strip())
     else:
         print("No input specified")
         sys.exit(0)
