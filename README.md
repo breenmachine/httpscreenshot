@@ -1,12 +1,17 @@
 # httpscreenshot
 
+### Installation via Docker
+
+`docker pull jesseosiecki/httpscreenshot`
+`docker run -v 
+
 ### Installation on Ubuntu
 
 #### Via Script
 
 Run `install-dependencies.sh` script as root.
 
-This script has been tested on Ubuntu 14.04.
+This script has been tested on Ubuntu 20.04 as *root* (sudo).
 
 ### Manually
 
