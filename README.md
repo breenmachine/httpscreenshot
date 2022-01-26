@@ -3,7 +3,7 @@
 ### Installation via Docker
 
 `docker pull jesseosiecki/httpscreenshot`
-`docker run -v 
+`docker run jesseosiecki/httpscreenshot`
 
 ### Installation on Ubuntu
 
