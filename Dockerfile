@@ -1,4 +1,4 @@
-# docker pull jesse-osiecki/httpscreenshot
+# docker pull jesseosiecki/httpscreenshot
 
 FROM ubuntu:20.04
 
