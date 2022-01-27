@@ -1,4 +1,4 @@
-# docker pull andmyhacks/httpscreenshot
+# docker pull jesseosiecki/httpscreenshot
 
 FROM ubuntu:20.04
 
@@ -19,3 +19,5 @@ RUN ln -s /etc/httpscreenshot/httpscreenshot.py /usr/bin/httpscreenshot
 
 RUN mkdir -p /etc/httpscreenshot/images
 WORKDIR /etc/httpscreenshot/images
+
+ENTRYPOINT ["httpscreenshot"]

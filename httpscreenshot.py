@@ -164,7 +164,7 @@ def parseGnmap(inFile, autodetect):
     return targets
 
 
-def setupBrowserProfile(headless, proxy):
+def setupBrowserProfile(headless, proxy, browserType):
     browser = None
     if (proxy is not None):
         service_args = ['--ignore-ssl-errors=true', '--ssl-protocol=any', '--proxy=' + proxy, '--proxy-type=socks5']
@@ -173,7 +173,18 @@ def setupBrowserProfile(headless, proxy):
 
     while (browser is None):
         try:
-            if (not headless):
+            if (browserType == 'Chrome' or browserType == 'Chromium'):
+                service = Service(ChromeDriverManager(log_level=0).install())
+                coptions = Options()
+                if headless:
+                    coptions.add_argument("--headless")
+                coptions.add_argument("--no-sandbox")
+                coptions.add_argument("--window-size=1024x768")
+                coptions.add_argument("--ignore-certificate-errors")
+                coptions.add_argument("--ssl-version-min=tls1")
+
+                browser = webdriver.Chrome(service=service, options=coptions)
+            else:
                 capabilities = DesiredCapabilities.FIREFOX
                 capabilities['acceptSslCerts'] = True
                 fp = webdriver.FirefoxProfile()
@@ -185,17 +196,15 @@ def setupBrowserProfile(headless, proxy):
                     fp.set_preference("network.proxy.socks", proxyItems[0])
                     fp.set_preference("network.proxy.socks_port", int(proxyItems[1]))
                     fp.set_preference("network.proxy.type", 1)
-                browser = webdriver.Firefox(firefox_profile=fp, capabilities=capabilities)
-            else:
-                service = Service(ChromeDriverManager(log_level=0).install())
-                coptions = Options()
-                coptions.add_argument("--headless")
-                coptions.add_argument("--no-sandbox")
-                coptions.add_argument("--window-size=1024x768")
-                coptions.add_argument("--ignore-certificate-errors")
-                coptions.add_argument("--ssl-version-min=tls1")
 
-                browser = webdriver.Chrome(service=service, options=coptions)
+                fireFoxOptions = webdriver.FirefoxOptions()
+                if headless:
+                    fireFoxOptions.headless = True
+
+                browser = webdriver.Firefox(firefox_profile=fp,
+                                            capabilities=capabilities,
+                                            options=fireFoxOptions)
+                browser.set_window_size(1024, 768)
 
         except Exception as e:
             print(e)
@@ -230,6 +239,7 @@ def worker(
         tryGUIOnFail,
         smartFetch,
         proxy,
+        browserType
 ):
     if debug:
         print("[*] Starting worker")
@@ -241,7 +251,7 @@ def worker(
             display = Display(visible=0, size=(800, 600))
             display.start()
 
-        browser = setupBrowserProfile(headless, proxy)
+        browser = setupBrowserProfile(headless, proxy, browserType)
 
     except Exception:
         print("[-] Oh no! Couldn't create the browser, Selenium blew up")
@@ -341,7 +351,7 @@ def worker(
                         display.start()
                         print("[+] Attempting to fetch with FireFox: " +
                               curUrl)
-                        browser2 = setupBrowserProfile(False, proxy)
+                        browser2 = setupBrowserProfile(False, proxy, "Firefox")
                         old_url = browser2.current_url
                         try:
                             browser2.get(curUrl.strip())
@@ -385,7 +395,7 @@ def worker(
                                                    exc_traceback)
                 print("".join("!! " + line for line in lines))
             browser.quit()
-            browser = setupBrowserProfile(headless, proxy)
+            browser = setupBrowserProfile(headless, proxy, "Firefox")
             continue
     browser.quit()
     display.stop()
@@ -512,6 +522,12 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="Run in headless mode (using phantomjs)",
+    )
+    parser.add_argument(
+        "-b",
+        "--browsertype",
+        default="Firefox",
+        help="Choose webdriver {Firefox, Chrome}"
     )
     parser.add_argument("-w",
                         "--workers",
@@ -653,6 +669,7 @@ if __name__ == "__main__":
                 args.trygui,
                 args.smartfetch,
                 args.proxy,
+                args.browsertype
             ),
         )
         workers.append(p)
